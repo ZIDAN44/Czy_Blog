@@ -41,7 +41,9 @@ export default function EditPostPage() {
           content: post.content,
           coverImageUrl: post.cover_image ?? '',
           status: post.status,
-          scheduledFor: post.scheduled_for ? new Date(post.scheduled_for).toISOString().slice(0, 16) : '',
+          scheduledFor: post.scheduled_for
+            ? new Date(post.scheduled_for).toISOString().slice(0, 16)
+            : '',
           categorySlug: post.category?.slug ?? '',
           tagSlugs: post.tags.map((t) => t.slug).join(', '),
         }}

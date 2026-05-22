@@ -2,11 +2,12 @@
 // so the published page matches what authors saw while writing.
 import React from 'react';
 
+type Mark = { type: string; attrs?: Record<string, unknown> };
 type Node = {
   type: string;
-  attrs?: Record<string, any>;
+  attrs?: Record<string, unknown>;
   content?: Node[];
-  marks?: { type: string; attrs?: Record<string, any> }[];
+  marks?: Mark[];
   text?: string;
 };
 
@@ -19,7 +20,12 @@ function applyMarks(text: string, marks: Node['marks'], key: string): React.Reac
     else if (m.type === 'code') node = <code key={key}>{node}</code>;
     else if (m.type === 'link')
       node = (
-        <a key={key} href={m.attrs?.href} target={m.attrs?.target ?? '_blank'} rel="noreferrer">
+        <a
+          key={key}
+          href={typeof m.attrs?.href === 'string' ? m.attrs.href : undefined}
+          target={typeof m.attrs?.target === 'string' ? m.attrs.target : '_blank'}
+          rel="noreferrer"
+        >
           {node}
         </a>
       );
@@ -48,7 +54,10 @@ function renderNode(node: Node, key: string): React.ReactNode {
       return <blockquote key={key}>{children}</blockquote>;
     case 'codeBlock':
       return (
-        <pre key={key} data-lang={node.attrs?.language}>
+        <pre
+          key={key}
+          data-lang={typeof node.attrs?.language === 'string' ? node.attrs.language : undefined}
+        >
           <code>{children}</code>
         </pre>
       );
@@ -57,7 +66,13 @@ function renderNode(node: Node, key: string): React.ReactNode {
     case 'hardBreak':
       return <br key={key} />;
     case 'image':
-      return <img key={key} src={node.attrs?.src} alt={node.attrs?.alt ?? ''} />;
+      return (
+        <img
+          key={key}
+          src={typeof node.attrs?.src === 'string' ? node.attrs.src : undefined}
+          alt={typeof node.attrs?.alt === 'string' ? node.attrs.alt : ''}
+        />
+      );
     case 'text':
       return applyMarks(node.text ?? '', node.marks, key);
     default:
@@ -65,7 +80,7 @@ function renderNode(node: Node, key: string): React.ReactNode {
   }
 }
 
-export default function TiptapRender({ doc }: { doc: any }) {
+export default function TiptapRender({ doc }: { doc: unknown }) {
   if (!doc || typeof doc !== 'object') return null;
   return <>{renderNode(doc as Node, 'r')}</>;
 }

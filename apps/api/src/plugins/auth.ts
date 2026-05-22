@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import jwt from '@fastify/jwt';
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { prisma } from '../db.js';
 import { hashApiKey } from '../lib/apiKey.js';
@@ -15,9 +15,18 @@ declare module '@fastify/jwt' {
 
 declare module 'fastify' {
   interface FastifyInstance {
-    authenticate: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
-    optionalAuth: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
-    apiKeyAuth: (req: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    authenticate: (
+      req: import('fastify').FastifyRequest,
+      reply: import('fastify').FastifyReply,
+    ) => Promise<void>;
+    optionalAuth: (
+      req: import('fastify').FastifyRequest,
+      reply: import('fastify').FastifyReply,
+    ) => Promise<void>;
+    apiKeyAuth: (
+      req: import('fastify').FastifyRequest,
+      reply: import('fastify').FastifyReply,
+    ) => Promise<void>;
   }
   interface FastifyRequest {
     apiKeyOwnerId?: string;
@@ -36,7 +45,11 @@ export default fp(async (app: FastifyInstance) => {
   });
 
   app.decorate('optionalAuth', async (req) => {
-    try { await req.jwtVerify(); } catch { /* anonymous */ }
+    try {
+      await req.jwtVerify();
+    } catch {
+      /* anonymous */
+    }
   });
 
   app.decorate('apiKeyAuth', async (req, reply) => {

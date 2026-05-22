@@ -28,12 +28,14 @@ export async function userRoutes(app: FastifyInstance) {
   // after the first-run bootstrap; there is no public registration.
   // ───────────────────────────────────────────────────────────────────────
   app.post('/', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
-    const body = z.object({
-      email: z.string().email(),
-      name: z.string().min(1),
-      password: z.string().min(8),
-      role: roleEnum,
-    }).parse(req.body);
+    const body = z
+      .object({
+        email: z.string().email(),
+        name: z.string().min(1),
+        password: z.string().min(8),
+        role: roleEnum,
+      })
+      .parse(req.body);
 
     const existing = await prisma.user.findUnique({ where: { email: body.email } });
     if (existing) return reply.code(409).send({ error: 'Email in use' });
@@ -80,12 +82,16 @@ export async function userRoutes(app: FastifyInstance) {
     if (!target) return reply.code(404).send({ error: 'Not found' });
     if (target.role === Role.SUPER_ADMIN) {
       const others = await prisma.user.count({ where: { role: Role.SUPER_ADMIN, NOT: { id } } });
-      if (others === 0) return reply.code(400).send({ error: 'Cannot delete the last super admin' });
+      if (others === 0)
+        return reply.code(400).send({ error: 'Cannot delete the last super admin' });
     }
 
     // Posts created by this user remain (FK is required). Re-assign to caller.
     await prisma.post.updateMany({ where: { authorId: id }, data: { authorId: req.user.sub } });
-    await prisma.media.updateMany({ where: { uploadedById: id }, data: { uploadedById: req.user.sub } });
+    await prisma.media.updateMany({
+      where: { uploadedById: id },
+      data: { uploadedById: req.user.sub },
+    });
     await prisma.apiKey.deleteMany({ where: { ownerId: id } });
     await prisma.user.delete({ where: { id } });
     return { ok: true };
@@ -98,7 +104,14 @@ export async function userRoutes(app: FastifyInstance) {
   app.get('/me/api-keys', async (req) => {
     const keys = await prisma.apiKey.findMany({
       where: { ownerId: req.user.sub },
-      select: { id: true, name: true, prefix: true, lastUsedAt: true, revokedAt: true, createdAt: true },
+      select: {
+        id: true,
+        name: true,
+        prefix: true,
+        lastUsedAt: true,
+        revokedAt: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
     return { data: keys };

@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+.next
+coverage
+apps/*/dist
+apps/*/.next
+apps/api/prisma/migrations
+package-lock.json
+*.md

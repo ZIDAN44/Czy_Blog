@@ -56,9 +56,14 @@ function Toolbar({ editor }: { editor: Editor }) {
       const fd = new FormData();
       fd.append('file', file);
       try {
-        const { url } = await api<{ url: string }>('/api/v1/media/upload', { method: 'POST', body: fd });
+        const { url } = await api<{ url: string }>('/api/v1/media/upload', {
+          method: 'POST',
+          body: fd,
+        });
         editor.chain().focus().setImage({ src: url }).run();
-      } catch (e) { alert(`Upload failed: ${(e as Error).message}`); }
+      } catch (e) {
+        alert(`Upload failed: ${(e as Error).message}`);
+      }
     };
     input.click();
   }, [editor]);
@@ -72,24 +77,82 @@ function Toolbar({ editor }: { editor: Editor }) {
 
   return (
     <div className="flex flex-wrap gap-1.5 p-2 border-b bg-slate-50">
-      <button className={btn(editor.isActive('bold'))} onClick={() => editor.chain().focus().toggleBold().run()}>B</button>
-      <button className={btn(editor.isActive('italic'))} onClick={() => editor.chain().focus().toggleItalic().run()}><i>I</i></button>
-      <button className={btn(editor.isActive('strike'))} onClick={() => editor.chain().focus().toggleStrike().run()}>S</button>
+      <button
+        className={btn(editor.isActive('bold'))}
+        onClick={() => editor.chain().focus().toggleBold().run()}
+      >
+        B
+      </button>
+      <button
+        className={btn(editor.isActive('italic'))}
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+      >
+        <i>I</i>
+      </button>
+      <button
+        className={btn(editor.isActive('strike'))}
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+      >
+        S
+      </button>
       <span className="w-px bg-slate-300 mx-1" />
-      <button className={btn(editor.isActive('heading', { level: 1 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>H1</button>
-      <button className={btn(editor.isActive('heading', { level: 2 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
-      <button className={btn(editor.isActive('heading', { level: 3 }))} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</button>
+      <button
+        className={btn(editor.isActive('heading', { level: 1 }))}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+      >
+        H1
+      </button>
+      <button
+        className={btn(editor.isActive('heading', { level: 2 }))}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+      >
+        H2
+      </button>
+      <button
+        className={btn(editor.isActive('heading', { level: 3 }))}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+      >
+        H3
+      </button>
       <span className="w-px bg-slate-300 mx-1" />
-      <button className={btn(editor.isActive('bulletList'))} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</button>
-      <button className={btn(editor.isActive('orderedList'))} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</button>
-      <button className={btn(editor.isActive('blockquote'))} onClick={() => editor.chain().focus().toggleBlockquote().run()}>“ ”</button>
-      <button className={btn(editor.isActive('codeBlock'))} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>{'</>'}</button>
+      <button
+        className={btn(editor.isActive('bulletList'))}
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+      >
+        •
+      </button>
+      <button
+        className={btn(editor.isActive('orderedList'))}
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+      >
+        1.
+      </button>
+      <button
+        className={btn(editor.isActive('blockquote'))}
+        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+      >
+        “ ”
+      </button>
+      <button
+        className={btn(editor.isActive('codeBlock'))}
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+      >
+        {'</>'}
+      </button>
       <span className="w-px bg-slate-300 mx-1" />
-      <button className={btn(editor.isActive('link'))} onClick={setLink}>🔗</button>
-      <button className={btn(false)} onClick={uploadImage}>🖼 Image</button>
+      <button className={btn(editor.isActive('link'))} onClick={setLink}>
+        🔗
+      </button>
+      <button className={btn(false)} onClick={uploadImage}>
+        🖼 Image
+      </button>
       <span className="w-px bg-slate-300 mx-1" />
-      <button className={btn(false)} onClick={() => editor.chain().focus().undo().run()}>↶</button>
-      <button className={btn(false)} onClick={() => editor.chain().focus().redo().run()}>↷</button>
+      <button className={btn(false)} onClick={() => editor.chain().focus().undo().run()}>
+        ↶
+      </button>
+      <button className={btn(false)} onClick={() => editor.chain().focus().redo().run()}>
+        ↷
+      </button>
     </div>
   );
 }
@@ -139,12 +202,15 @@ export default function BlockEditor({ initialContent, onChange }: Props) {
     onUpdate: ({ editor }) => onChange(editor.getJSON()),
   });
 
-  if (!editor) return <div className="h-[400px] grid place-items-center text-slate-400">Loading editor…</div>;
+  if (!editor)
+    return <div className="h-[400px] grid place-items-center text-slate-400">Loading editor…</div>;
 
   return (
     <div className="bg-white border rounded-xl overflow-hidden">
       <Toolbar editor={editor} />
-      <div className="p-5"><EditorContent editor={editor} /></div>
+      <div className="p-5">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }

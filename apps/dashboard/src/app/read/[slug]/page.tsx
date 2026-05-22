@@ -34,7 +34,9 @@ export default async function ReadPost({ params }: { params: Promise<{ slug: str
 
   return (
     <article className="space-y-6">
-      <Link href="/read" className="text-sm text-slate-500 hover:underline">← All posts</Link>
+      <Link href="/read" className="text-sm text-slate-500 hover:underline">
+        ← All posts
+      </Link>
       <header className="space-y-3">
         <h1 className="text-4xl font-bold leading-tight">{post.title}</h1>
         <p className="text-sm text-slate-500">

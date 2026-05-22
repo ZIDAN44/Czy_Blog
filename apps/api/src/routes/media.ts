@@ -8,7 +8,12 @@ import { config } from '../config.js';
 const id = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 16);
 
 const ALLOWED_MIME = new Set([
-  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'image/avif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/svg+xml',
+  'image/avif',
 ]);
 
 export async function mediaRoutes(app: FastifyInstance) {

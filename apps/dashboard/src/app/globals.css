@@ -1,31 +1,58 @@
 /* Tailwind v4: one import replaces the v3 `@tailwind base/components/utilities`
    directives. Content sources are auto-detected; no config file needed for
    default setups. */
-@import "tailwindcss";
+@import 'tailwindcss';
 
-html, body { height: 100%; }
+html,
+body {
+  height: 100%;
+}
 body {
   @apply bg-slate-50 text-slate-900;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
 /* TipTap editor styles */
-.ProseMirror { @apply min-h-[400px] outline-none; }
+.ProseMirror {
+  @apply min-h-[400px] outline-none;
+}
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   @apply text-slate-400 float-left h-0 pointer-events-none;
 }
-.ProseMirror h1 { @apply text-3xl font-bold mt-6 mb-3; }
-.ProseMirror h2 { @apply text-2xl font-semibold mt-5 mb-2; }
-.ProseMirror h3 { @apply text-xl font-semibold mt-4 mb-2; }
-.ProseMirror p  { @apply my-2 leading-7; }
-.ProseMirror ul { @apply list-disc pl-6 my-2; }
-.ProseMirror ol { @apply list-decimal pl-6 my-2; }
-.ProseMirror blockquote { @apply border-l-4 border-slate-300 pl-4 italic text-slate-700; }
+.ProseMirror h1 {
+  @apply text-3xl font-bold mt-6 mb-3;
+}
+.ProseMirror h2 {
+  @apply text-2xl font-semibold mt-5 mb-2;
+}
+.ProseMirror h3 {
+  @apply text-xl font-semibold mt-4 mb-2;
+}
+.ProseMirror p {
+  @apply my-2 leading-7;
+}
+.ProseMirror ul {
+  @apply list-disc pl-6 my-2;
+}
+.ProseMirror ol {
+  @apply list-decimal pl-6 my-2;
+}
+.ProseMirror blockquote {
+  @apply border-l-4 border-slate-300 pl-4 italic text-slate-700;
+}
 .ProseMirror pre {
   @apply bg-slate-900 text-slate-100 rounded-lg p-4 my-3 overflow-x-auto font-mono text-sm;
 }
-.ProseMirror code { @apply bg-slate-100 rounded px-1 py-0.5 text-sm font-mono; }
-.ProseMirror pre code { @apply bg-transparent p-0; }
-.ProseMirror img { @apply rounded-lg my-3 max-w-full h-auto; }
-.ProseMirror a { @apply text-blue-600 underline; }
+.ProseMirror code {
+  @apply bg-slate-100 rounded px-1 py-0.5 text-sm font-mono;
+}
+.ProseMirror pre code {
+  @apply bg-transparent p-0;
+}
+.ProseMirror img {
+  @apply rounded-lg my-3 max-w-full h-auto;
+}
+.ProseMirror a {
+  @apply text-blue-600 underline;
+}

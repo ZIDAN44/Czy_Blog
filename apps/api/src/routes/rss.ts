@@ -3,7 +3,10 @@ import { prisma, PostStatus } from '../db.js';
 import { config } from '../config.js';
 
 function esc(s: string): string {
-  return s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
+  return s.replace(
+    /[<>&'"]/g,
+    (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!,
+  );
 }
 
 export async function rssRoutes(app: FastifyInstance) {
@@ -15,7 +18,9 @@ export async function rssRoutes(app: FastifyInstance) {
       include: { author: true },
     });
 
-    const items = posts.map((p) => `
+    const items = posts
+      .map(
+        (p) => `
       <item>
         <title>${esc(p.title)}</title>
         <link>${config.publicSiteUrl}/posts/${p.slug}</link>
@@ -23,7 +28,9 @@ export async function rssRoutes(app: FastifyInstance) {
         <pubDate>${p.publishedAt?.toUTCString() ?? ''}</pubDate>
         <author>${esc(p.author.name)}</author>
         ${p.excerpt ? `<description>${esc(p.excerpt)}</description>` : ''}
-      </item>`).join('');
+      </item>`,
+      )
+      .join('');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel>

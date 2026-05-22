@@ -19,9 +19,13 @@ export async function adminTaxonomyRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
 
   app.post('/categories', { preHandler: [requireRole(Role.EDITOR)] }, async (req, reply) => {
-    const body = z.object({ name: z.string().min(1), description: z.string().optional() }).parse(req.body);
+    const body = z
+      .object({ name: z.string().min(1), description: z.string().optional() })
+      .parse(req.body);
     const slug = toSlug(body.name);
-    const cat = await prisma.category.create({ data: { slug, name: body.name, description: body.description } });
+    const cat = await prisma.category.create({
+      data: { slug, name: body.name, description: body.description },
+    });
     return reply.code(201).send(cat);
   });
 

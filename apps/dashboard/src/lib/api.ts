@@ -3,7 +3,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 export type Role = 'SUPER_ADMIN' | 'EDITOR' | 'AUTHOR' | 'CONTRIBUTOR';
 export type PostStatus = 'DRAFT' | 'PENDING_REVIEW' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
 
-export interface SessionUser { id: string; email: string; name: string; role: Role; }
+export interface SessionUser {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+}
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -26,7 +31,9 @@ export function currentUser(): SessionUser | null {
   return raw ? (JSON.parse(raw) as SessionUser) : null;
 }
 
-interface ApiOptions extends RequestInit { skipAuth?: boolean; }
+interface ApiOptions extends RequestInit {
+  skipAuth?: boolean;
+}
 
 export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Promise<T> {
   const headers = new Headers(opts.headers);
@@ -39,11 +46,13 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   }
   const res = await fetch(`${API_URL}${path}`, { ...opts, headers });
   if (!res.ok) {
-    let detail: unknown;
-    try { detail = await res.json(); } catch { /* */ }
-    throw new Error(
-      (detail as any)?.error ?? `Request failed: ${res.status} ${res.statusText}`,
-    );
+    let detail: { error?: string } | undefined;
+    try {
+      detail = (await res.json()) as { error?: string };
+    } catch {
+      /* */
+    }
+    throw new Error(detail?.error ?? `Request failed: ${res.status} ${res.statusText}`);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

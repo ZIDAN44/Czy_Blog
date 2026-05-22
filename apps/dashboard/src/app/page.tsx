@@ -7,9 +7,14 @@ export default function Index() {
   const router = useRouter();
   useEffect(() => {
     (async () => {
-      if (currentUser()) { router.replace('/dashboard'); return; }
+      if (currentUser()) {
+        router.replace('/dashboard');
+        return;
+      }
       try {
-        const r = await api<{ needsBootstrap: boolean }>('/api/v1/auth/bootstrap-status', { skipAuth: true });
+        const r = await api<{ needsBootstrap: boolean }>('/api/v1/auth/bootstrap-status', {
+          skipAuth: true,
+        });
         router.replace(r.needsBootstrap ? '/signup' : '/login');
       } catch {
         router.replace('/login');

@@ -15,24 +15,35 @@ export default function LoginPage() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await api<{ needsBootstrap: boolean }>('/api/v1/auth/bootstrap-status', { skipAuth: true });
+        const r = await api<{ needsBootstrap: boolean }>('/api/v1/auth/bootstrap-status', {
+          skipAuth: true,
+        });
         if (r.needsBootstrap) router.replace('/signup');
-      } catch { /* API might be down — let the user try anyway */ }
-      finally { setChecking(false); }
+      } catch {
+        /* API might be down — let the user try anyway */
+      } finally {
+        setChecking(false);
+      }
     })();
   }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
-      const { token, user } = await api<{ token: string; user: SessionUser }>('/api/v1/auth/login', {
-        method: 'POST', body: JSON.stringify({ email, password }), skipAuth: true,
-      });
+      const { token, user } = await api<{ token: string; user: SessionUser }>(
+        '/api/v1/auth/login',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+          skipAuth: true,
+        },
+      );
       setSession(token, user);
       router.replace('/dashboard');
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Sign-in failed');
     } finally {
       setBusy(false);
     }
@@ -47,16 +58,31 @@ export default function LoginPage() {
         <p className="text-sm text-slate-500">Sign in to continue</p>
         <label className="block">
           <span className="text-sm font-medium">Email</span>
-          <input className="mt-1 w-full border rounded-lg px-3 py-2"
-            value={email} onChange={(e) => setEmail(e.target.value)} type="email" required autoComplete="email" />
+          <input
+            className="mt-1 w-full border rounded-lg px-3 py-2"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            required
+            autoComplete="email"
+          />
         </label>
         <label className="block">
           <span className="text-sm font-medium">Password</span>
-          <input className="mt-1 w-full border rounded-lg px-3 py-2"
-            value={password} onChange={(e) => setPassword(e.target.value)} type="password" required autoComplete="current-password" />
+          <input
+            className="mt-1 w-full border rounded-lg px-3 py-2"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            required
+            autoComplete="current-password"
+          />
         </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <button disabled={busy} className="w-full bg-slate-900 text-white rounded-lg py-2 disabled:opacity-60">
+        <button
+          disabled={busy}
+          className="w-full bg-slate-900 text-white rounded-lg py-2 disabled:opacity-60"
+        >
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
         <p className="text-xs text-slate-400 pt-2">

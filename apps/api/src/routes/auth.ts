@@ -47,7 +47,9 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/bootstrap', async (req, reply) => {
     const existing = await prisma.user.count();
     if (existing > 0) {
-      return reply.code(409).send({ error: 'Already bootstrapped. Ask an admin to create your account.' });
+      return reply
+        .code(409)
+        .send({ error: 'Already bootstrapped. Ask an admin to create your account.' });
     }
     const body = bootstrapSchema.parse(req.body);
     const passwordHash = await bcrypt.hash(body.password, 10);
@@ -72,15 +74,24 @@ export async function authRoutes(app: FastifyInstance) {
   app.get('/me', { preHandler: [app.authenticate] }, async (req) => {
     const u = await prisma.user.findUnique({ where: { id: req.user.sub } });
     if (!u) throw new Error('User missing');
-    return { id: u.id, email: u.email, name: u.name, role: u.role, bio: u.bio, avatarUrl: u.avatarUrl };
+    return {
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      bio: u.bio,
+      avatarUrl: u.avatarUrl,
+    };
   });
 
   // Self-service password change (any authenticated user)
   app.post('/change-password', { preHandler: [app.authenticate] }, async (req, reply) => {
-    const body = z.object({
-      currentPassword: z.string().min(1),
-      newPassword: z.string().min(8),
-    }).parse(req.body);
+    const body = z
+      .object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(8),
+      })
+      .parse(req.body);
     const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
     if (!user || !(await bcrypt.compare(body.currentPassword, user.passwordHash))) {
       return reply.code(401).send({ error: 'Current password incorrect' });

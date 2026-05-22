@@ -8,11 +8,19 @@ export default function ReadLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen flex flex-col bg-white">
       <header className="border-b">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/read" className="font-bold text-lg">Czy Blog</Link>
+          <Link href="/read" className="font-bold text-lg">
+            Czy Blog
+          </Link>
           <nav className="text-sm text-slate-500 flex gap-4">
-            <Link href="/read" className="hover:text-slate-900">Posts</Link>
-            <a href="/api-proxy/rss.xml" className="hover:text-slate-900">RSS</a>
-            <Link href="/dashboard" className="hover:text-slate-900">Dashboard</Link>
+            <Link href="/read" className="hover:text-slate-900">
+              Posts
+            </Link>
+            <a href="/api-proxy/rss.xml" className="hover:text-slate-900">
+              RSS
+            </a>
+            <Link href="/dashboard" className="hover:text-slate-900">
+              Dashboard
+            </Link>
           </nav>
         </div>
       </header>
