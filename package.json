@@ -1,0 +1,26 @@
+{
+  "name": "czy-blog",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm --workspace apps/api run dev",
+    "dev:dashboard": "npm --workspace apps/dashboard run dev",
+    "dev": "npm-run-all -p dev:api dev:dashboard",
+    "build:api": "npm --workspace apps/api run build",
+    "build:dashboard": "npm --workspace apps/dashboard run build",
+    "build": "npm-run-all -s build:api build:dashboard",
+    "start:api": "npm --workspace apps/api run start",
+    "start:dashboard": "npm --workspace apps/dashboard run start",
+    "start": "npm-run-all -p start:api start:dashboard",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:migrate": "npm --workspace apps/api run db:migrate",
+    "db:deploy": "npm --workspace apps/api run db:deploy"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  }
+}

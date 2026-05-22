@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: czyblog-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: czyblog
+      POSTGRES_PASSWORD: czyblog
+      POSTGRES_DB: czyblog
+    ports:
+      - "5432:5432"
+    volumes:
+      - czyblog_pgdata:/var/lib/postgresql
+
+volumes:
+  czyblog_pgdata:

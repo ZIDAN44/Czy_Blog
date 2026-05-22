@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+dist/
+build/
+*.tsbuildinfo
+
+# Logs & coverage
+*.log
+coverage/
+.nyc_output/
+
+# Caches
+.turbo/
+.cache/
+.eslintcache
+
+# Env files — keep .env.example committed; ignore actual values
+.env
+.env.local
+.env.*.local
+
+# Generated Prisma client (regenerated via `prisma generate`)
+apps/api/src/generated/
+
+# Uploaded media (local dev storage; swap for S3/R2 in prod)
+apps/api/uploads/
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

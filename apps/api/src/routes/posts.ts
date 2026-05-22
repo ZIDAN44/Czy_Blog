@@ -1,0 +1,243 @@
+import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
+import { prisma, PostStatus, Role } from '../db.js';
+import { toSlug, uniquePostSlug } from '../lib/slug.js';
+import { canEditPost, canPublish } from '../lib/rbac.js';
+import { serializePost } from '../lib/serialize.js';
+
+const postInclude = {
+  author: { select: { id: true, name: true, avatarUrl: true, bio: true } },
+  category: true,
+  tags: { include: { tag: true } },
+} as const;
+
+const blockDocSchema = z.object({ type: z.literal('doc'), content: z.array(z.any()) });
+
+const createSchema = z.object({
+  title: z.string().min(1).max(200),
+  excerpt: z.string().max(500).optional(),
+  content: blockDocSchema,
+  coverImageUrl: z.string().url().optional(),
+  categorySlug: z.string().optional(),
+  tagSlugs: z.array(z.string()).optional(),
+  status: z.enum(PostStatus).optional(),
+  // Zod 4: ISO formats moved to z.iso.*
+  scheduledFor: z.iso.datetime().optional(),
+});
+
+const updateSchema = createSchema.partial().extend({ title: z.string().min(1).max(200).optional() });
+
+// Upsert a category by slug. Auto-creates with a humanized name if missing.
+async function resolveCategoryId(input: string): Promise<string> {
+  const slug = toSlug(input);
+  const name = input
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase()) || slug;
+  const cat = await prisma.category.upsert({
+    where: { slug },
+    update: {},
+    create: { slug, name },
+  });
+  return cat.id;
+}
+
+async function resolveTagIds(slugs: string[]): Promise<string[]> {
+  if (!slugs.length) return [];
+  const existing = await prisma.tag.findMany({ where: { slug: { in: slugs } } });
+  const existingSlugs = new Set(existing.map((t) => t.slug));
+  const toCreate = slugs.filter((s) => !existingSlugs.has(s));
+  const created = await Promise.all(
+    toCreate.map((slug) => prisma.tag.create({ data: { slug, name: slug } })),
+  );
+  return [...existing, ...created].map((t) => t.id);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Public read endpoints — consumed by your personal site
+// ──────────────────────────────────────────────────────────────────────────
+export async function publicPostRoutes(app: FastifyInstance) {
+  app.get('/', async (req, reply) => {
+    const q = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      limit: z.coerce.number().int().min(1).max(50).default(10),
+      tag: z.string().optional(),
+      category: z.string().optional(),
+      q: z.string().optional(),
+    }).parse(req.query);
+
+    const where: any = {
+      status: PostStatus.PUBLISHED,
+      deletedAt: null,
+      publishedAt: { lte: new Date() },
+    };
+    if (q.tag) where.tags = { some: { tag: { slug: q.tag } } };
+    if (q.category) where.category = { slug: q.category };
+    if (q.q) where.OR = [
+      { title: { contains: q.q, mode: 'insensitive' } },
+      { excerpt: { contains: q.q, mode: 'insensitive' } },
+    ];
+
+    const [total, posts] = await Promise.all([
+      prisma.post.count({ where }),
+      prisma.post.findMany({
+        where, include: postInclude,
+        orderBy: { publishedAt: 'desc' },
+        skip: (q.page - 1) * q.limit,
+        take: q.limit,
+      }),
+    ]);
+
+    return reply.send({
+      data: posts.map(serializePost),
+      pagination: {
+        page: q.page, limit: q.limit, total,
+        pages: Math.ceil(total / q.limit),
+      },
+    });
+  });
+
+  app.get('/:slug', async (req, reply) => {
+    const { slug } = z.object({ slug: z.string() }).parse(req.params);
+    const post = await prisma.post.findFirst({
+      where: { slug, status: PostStatus.PUBLISHED, deletedAt: null, publishedAt: { lte: new Date() } },
+      include: postInclude,
+    });
+    if (!post) return reply.code(404).send({ error: 'Not found' });
+    // Fire-and-forget view count
+    prisma.post.update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+    return reply.send({ data: serializePost(post) });
+  });
+
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Authenticated post management endpoints
+// ──────────────────────────────────────────────────────────────────────────
+export async function adminPostRoutes(app: FastifyInstance) {
+  app.addHook('preHandler', app.authenticate);
+
+  app.get('/', async (req) => {
+    const q = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      limit: z.coerce.number().int().min(1).max(100).default(20),
+      status: z.enum(PostStatus).optional(),
+      mine: z.coerce.boolean().optional(),
+    }).parse(req.query);
+
+    const where: any = { deletedAt: null };
+    if (q.status) where.status = q.status;
+    // Contributors can only see their own posts; authors only their own; editors+ see all.
+    if (q.mine || req.user.role === Role.CONTRIBUTOR || req.user.role === Role.AUTHOR) {
+      where.authorId = req.user.sub;
+    }
+
+    const [total, posts] = await Promise.all([
+      prisma.post.count({ where }),
+      prisma.post.findMany({
+        where, include: postInclude,
+        orderBy: { updatedAt: 'desc' },
+        skip: (q.page - 1) * q.limit, take: q.limit,
+      }),
+    ]);
+    return {
+      data: posts.map(serializePost),
+      pagination: { page: q.page, limit: q.limit, total, pages: Math.ceil(total / q.limit) },
+    };
+  });
+
+  app.get('/:id', async (req, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const post = await prisma.post.findUnique({ where: { id }, include: postInclude });
+    if (!post || post.deletedAt) return reply.code(404).send({ error: 'Not found' });
+    if (!canEditPost(req.user.role, req.user.sub, post.authorId)) {
+      return reply.code(403).send({ error: 'Forbidden' });
+    }
+    return { data: serializePost(post) };
+  });
+
+  app.post('/', async (req, reply) => {
+    const body = createSchema.parse(req.body);
+    const slug = await uniquePostSlug(body.title);
+
+    const categoryId = body.categorySlug ? await resolveCategoryId(body.categorySlug) : null;
+
+    const requestedStatus = body.status ?? PostStatus.DRAFT;
+    const finalStatus =
+      requestedStatus === PostStatus.PUBLISHED && !canPublish(req.user.role)
+        ? PostStatus.PENDING_REVIEW
+        : requestedStatus;
+
+    const tagIds = await resolveTagIds(body.tagSlugs ?? []);
+
+    const post = await prisma.post.create({
+      data: {
+        slug, title: body.title, excerpt: body.excerpt,
+        content: body.content, coverImageUrl: body.coverImageUrl,
+        status: finalStatus,
+        publishedAt: finalStatus === PostStatus.PUBLISHED ? new Date() : null,
+        scheduledFor: body.scheduledFor ? new Date(body.scheduledFor) : null,
+        authorId: req.user.sub, categoryId,
+        tags: { create: tagIds.map((tagId) => ({ tagId })) },
+      },
+      include: postInclude,
+    });
+    return reply.code(201).send({ data: serializePost(post) });
+  });
+
+  app.patch('/:id', async (req, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const body = updateSchema.parse(req.body);
+    const post = await prisma.post.findUnique({ where: { id } });
+    if (!post || post.deletedAt) return reply.code(404).send({ error: 'Not found' });
+    if (!canEditPost(req.user.role, req.user.sub, post.authorId)) {
+      return reply.code(403).send({ error: 'Forbidden' });
+    }
+
+    const data: any = {};
+    if (body.title) {
+      data.title = body.title;
+      if (body.title !== post.title) data.slug = await uniquePostSlug(body.title, id);
+    }
+    if (body.excerpt !== undefined) data.excerpt = body.excerpt;
+    if (body.content) data.content = body.content;
+    if (body.coverImageUrl !== undefined) data.coverImageUrl = body.coverImageUrl;
+    if (body.scheduledFor !== undefined) data.scheduledFor = body.scheduledFor ? new Date(body.scheduledFor) : null;
+
+    if (body.status) {
+      const target = body.status;
+      if (target === PostStatus.PUBLISHED && !canPublish(req.user.role)) {
+        data.status = PostStatus.PENDING_REVIEW;
+      } else {
+        data.status = target;
+        if (target === PostStatus.PUBLISHED && !post.publishedAt) data.publishedAt = new Date();
+      }
+    }
+
+    if (body.categorySlug !== undefined) {
+      data.categoryId = body.categorySlug ? await resolveCategoryId(body.categorySlug) : null;
+    }
+
+    if (body.tagSlugs) {
+      const tagIds = await resolveTagIds(body.tagSlugs);
+      await prisma.postTag.deleteMany({ where: { postId: id } });
+      data.tags = { create: tagIds.map((tagId) => ({ tagId })) };
+    }
+
+    const updated = await prisma.post.update({ where: { id }, data, include: postInclude });
+    return { data: serializePost(updated) };
+  });
+
+  app.delete('/:id', async (req, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const post = await prisma.post.findUnique({ where: { id } });
+    if (!post || post.deletedAt) return reply.code(404).send({ error: 'Not found' });
+    if (!canEditPost(req.user.role, req.user.sub, post.authorId)) {
+      return reply.code(403).send({ error: 'Forbidden' });
+    }
+    await prisma.post.update({ where: { id }, data: { deletedAt: new Date(), status: PostStatus.ARCHIVED } });
+    return { ok: true };
+  });
+
+}

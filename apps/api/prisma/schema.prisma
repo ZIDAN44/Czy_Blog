@@ -1,0 +1,126 @@
+// Czy Blog database schema
+// Postgres + JSONB for block-editor content
+
+// Prisma 7: explicit `output` is required — the generator no longer writes
+// into node_modules. We point it inside src/ so the relative imports stay
+// short and the TS compiler picks the types up automatically.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7: connection URL has moved to prisma.config.ts.
+// Driver adapter (@prisma/adapter-pg) is required at runtime — see src/db.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  EDITOR
+  AUTHOR
+  CONTRIBUTOR
+}
+
+enum PostStatus {
+  DRAFT
+  PENDING_REVIEW
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(CONTRIBUTOR)
+  bio          String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  posts   Post[]
+  apiKeys ApiKey[]
+  media   Media[]
+}
+
+model Post {
+  id            String     @id @default(cuid())
+  slug          String     @unique
+  title         String
+  excerpt       String?
+  // Block-editor JSON (TipTap doc). NOT raw HTML.
+  content       Json
+  coverImageUrl String?
+  status        PostStatus @default(DRAFT)
+  publishedAt   DateTime?
+  scheduledFor  DateTime?
+  deletedAt     DateTime?
+  viewCount     Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  authorId   String
+  author     User       @relation(fields: [authorId], references: [id])
+  categoryId String?
+  category   Category?  @relation(fields: [categoryId], references: [id])
+  tags       PostTag[]
+
+  @@index([status, publishedAt])
+  @@index([authorId])
+  @@index([deletedAt])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  posts Post[]
+}
+
+model Tag {
+  id    String    @id @default(cuid())
+  slug  String    @unique
+  name  String
+  posts PostTag[]
+}
+
+model PostTag {
+  postId String
+  tagId  String
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model Media {
+  id          String   @id @default(cuid())
+  filename    String
+  storagePath String
+  url         String
+  mimeType    String
+  sizeBytes   Int
+  width       Int?
+  height      Int?
+  uploadedById String
+  uploadedBy   User    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyHash    String    @unique
+  prefix     String    // first 8 chars, for display
+  ownerId    String
+  owner      User      @relation(fields: [ownerId], references: [id])
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
