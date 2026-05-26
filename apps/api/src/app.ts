@@ -26,6 +26,7 @@ export async function buildApp() {
       cb(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   await app.register(rateLimit, {
