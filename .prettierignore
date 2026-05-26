@@ -5,6 +5,8 @@ build
 coverage
 apps/*/dist
 apps/*/.next
+next-env.d.ts
+**/next-env.d.ts
 apps/api/prisma/migrations
 package-lock.json
 *.md
