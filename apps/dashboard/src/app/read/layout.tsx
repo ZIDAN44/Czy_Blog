@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import Logo from '@/components/Logo';
 
 export const metadata: Metadata = { title: 'Czy Blog' };
 
@@ -9,9 +10,7 @@ export default function ReadLayout({ children }: { children: React.ReactNode }) 
       <header className="sticky top-0 z-30 backdrop-blur-md bg-white/80 border-b border-slate-200/60">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/read" className="flex items-center gap-2 group">
-            <span className="grid place-items-center w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-bold text-sm">
-              C
-            </span>
+            <Logo className="w-7 h-7 text-slate-900" />
             <span className="font-semibold tracking-tight">Czy Blog</span>
           </Link>
           <nav className="text-sm text-slate-500 flex items-center gap-1">

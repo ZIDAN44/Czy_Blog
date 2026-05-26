@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Logo from '@/components/Logo';
 import { api, setSession, type SessionUser } from '@/lib/api';
 
 export default function LoginPage() {
@@ -64,9 +65,7 @@ export default function LoginPage() {
           }}
         />
         <div className="relative flex items-center gap-2.5">
-          <span className="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-400 to-violet-500 font-bold shadow-lg">
-            C
-          </span>
+          <Logo className="w-9 h-9 text-white" />
           <span className="font-semibold tracking-tight text-lg">Czy Blog</span>
         </div>
         <div className="relative space-y-4 max-w-sm">
@@ -82,9 +81,7 @@ export default function LoginPage() {
       <section className="flex items-center justify-center p-6 sm:p-10">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5 animate-slideUp">
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <span className="grid place-items-center w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-bold text-sm">
-              C
-            </span>
+            <Logo className="w-8 h-8 text-slate-900" />
             <span className="font-semibold tracking-tight">Czy Blog</span>
           </div>
           <div>

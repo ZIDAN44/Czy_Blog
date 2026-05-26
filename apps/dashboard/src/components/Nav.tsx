@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Logo from '@/components/Logo';
 import { clearSession, currentUser, type SessionUser } from '@/lib/api';
 
 export default function Nav() {
@@ -42,9 +43,7 @@ export default function Nav() {
     <header className="sticky top-0 z-30 backdrop-blur-md bg-white/70 border-b border-slate-200/60">
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center gap-6">
         <Link href="/dashboard" className="flex items-center gap-2 group">
-          <span className="grid place-items-center w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
-            C
-          </span>
+          <Logo className="w-7 h-7 text-slate-900 group-hover:scale-105 transition-transform" />
           <span className="font-semibold tracking-tight">Czy Blog</span>
         </Link>
 

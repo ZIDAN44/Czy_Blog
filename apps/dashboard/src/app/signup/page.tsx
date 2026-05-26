@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Logo from '@/components/Logo';
 import { api, setSession, type SessionUser } from '@/lib/api';
 
 export default function SignupPage() {
@@ -63,9 +64,7 @@ export default function SignupPage() {
           }}
         />
         <div className="relative flex items-center gap-2.5">
-          <span className="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-400 to-violet-500 font-bold shadow-lg">
-            C
-          </span>
+          <Logo className="w-9 h-9 text-white" />
           <span className="font-semibold tracking-tight text-lg">Czy Blog</span>
         </div>
         <div className="relative space-y-4 max-w-md">
