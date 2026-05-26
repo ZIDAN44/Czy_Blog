@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
-import { api, setSession, type SessionUser } from '@/lib/api';
+import { api, currentUser, setSession, type SessionUser } from '@/lib/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,6 +13,10 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
+    if (currentUser()) {
+      router.replace('/dashboard');
+      return;
+    }
     (async () => {
       try {
         const r = await api<{ needsBootstrap: boolean }>('/api/v1/auth/bootstrap-status', {
