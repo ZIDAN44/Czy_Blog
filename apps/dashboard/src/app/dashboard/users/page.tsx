@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, currentUser, type Role } from '@/lib/api';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface UserRow {
   id: string;
@@ -22,6 +23,7 @@ const ROLE_DESCRIPTIONS: Record<Role, string> = {
 
 export default function UsersPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const me = currentUser();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +59,13 @@ export default function UsersPage() {
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Create this account?',
+      message: `${form.name} <${form.email}> will be added as ${form.role}. They can sign in immediately with the password you set.`,
+      confirmLabel: 'Create account',
+      tone: 'success',
+    });
+    if (!ok) return;
     setBusy(true);
     setError(null);
     try {
@@ -71,6 +80,15 @@ export default function UsersPage() {
   }
 
   async function changeRole(id: string, role: Role) {
+    const user = users.find((u) => u.id === id);
+    if (user && user.role === role) return;
+    const ok = await confirm({
+      title: 'Change role?',
+      message: `${user?.name ?? 'This user'} will be changed from ${user?.role} to ${role}. Their permissions will update immediately.`,
+      confirmLabel: 'Change role',
+      tone: 'warning',
+    });
+    if (!ok) return;
     try {
       await api(`/api/v1/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
       load();
@@ -80,7 +98,14 @@ export default function UsersPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Delete this user? Their posts will be re-assigned to you.')) return;
+    const user = users.find((u) => u.id === id);
+    const ok = await confirm({
+      title: 'Delete this user?',
+      message: `${user?.name ?? 'This user'} will be permanently deleted. Their posts will be re-assigned to you. This cannot be undone.`,
+      confirmLabel: 'Delete user',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await api(`/api/v1/users/${id}`, { method: 'DELETE' });
       load();

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface KeyRow {
   id: string;
@@ -12,6 +13,7 @@ interface KeyRow {
 }
 
 export default function ApiKeysPage() {
+  const confirm = useConfirm();
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [name, setName] = useState('');
   const [newKey, setNewKey] = useState<string | null>(null);
@@ -26,6 +28,13 @@ export default function ApiKeysPage() {
 
   async function create() {
     if (!name.trim()) return;
+    const ok = await confirm({
+      title: 'Create API key?',
+      message: `A new key named "${name.trim()}" will be created. The full key is shown only once — make sure to copy it.`,
+      confirmLabel: 'Create key',
+      tone: 'default',
+    });
+    if (!ok) return;
     const r = await api<{ key: string }>('/api/v1/users/me/api-keys', {
       method: 'POST',
       body: JSON.stringify({ name }),
@@ -36,7 +45,13 @@ export default function ApiKeysPage() {
   }
 
   async function revoke(id: string) {
-    if (!confirm('Revoke this key? The consumer will start failing immediately.')) return;
+    const ok = await confirm({
+      title: 'Revoke this API key?',
+      message: 'The consumer using this key will start failing immediately. This cannot be undone.',
+      confirmLabel: 'Revoke key',
+      tone: 'danger',
+    });
+    if (!ok) return;
     await api(`/api/v1/users/me/api-keys/${id}`, { method: 'DELETE' });
     load();
   }

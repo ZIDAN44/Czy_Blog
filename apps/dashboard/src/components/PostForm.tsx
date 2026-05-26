@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BlockEditor from './Editor';
 import { api, currentUser, type PostStatus } from '@/lib/api';
+import { useConfirm, type ConfirmOptions } from './ConfirmDialog';
 
 type DocNode = { type: string; [key: string]: unknown };
 type EmptyDoc = { type: 'doc'; content: DocNode[] };
@@ -36,8 +37,43 @@ interface Props {
   initial?: Partial<PostData>;
 }
 
+const CONFIRM_FOR_STATUS: Record<PostStatus, ConfirmOptions> = {
+  DRAFT: {
+    title: 'Save as draft?',
+    message: 'The post will be saved privately. It will not be visible to readers.',
+    confirmLabel: 'Save draft',
+    tone: 'default',
+  },
+  PENDING_REVIEW: {
+    title: 'Submit for review?',
+    message:
+      'An editor will be notified to review and publish your post. You will not be able to edit while it is under review without resubmitting.',
+    confirmLabel: 'Submit for review',
+    tone: 'warning',
+  },
+  PUBLISHED: {
+    title: 'Publish this post?',
+    message: 'The post will go live immediately and be visible to all readers.',
+    confirmLabel: 'Publish now',
+    tone: 'success',
+  },
+  SCHEDULED: {
+    title: 'Schedule this post?',
+    message: 'The post will be automatically published at the scheduled time.',
+    confirmLabel: 'Schedule post',
+    tone: 'success',
+  },
+  ARCHIVED: {
+    title: 'Archive this post?',
+    message: 'The post will be hidden from readers. You can restore it later.',
+    confirmLabel: 'Archive',
+    tone: 'warning',
+  },
+};
+
 export default function PostForm({ postId, initial }: Props) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [form, setForm] = useState<PostData>({
     title: '',
     excerpt: '',
@@ -59,6 +95,13 @@ export default function PostForm({ postId, initial }: Props) {
   }
 
   async function save(status: PostStatus) {
+    const opts = CONFIRM_FOR_STATUS[status];
+    const message =
+      status === 'SCHEDULED' && form.scheduledFor
+        ? `${opts.message}\n\nScheduled for: ${new Date(form.scheduledFor).toLocaleString()}`
+        : opts.message;
+    const ok = await confirm({ ...opts, message });
+    if (!ok) return;
     setBusy(true);
     setError(null);
     try {

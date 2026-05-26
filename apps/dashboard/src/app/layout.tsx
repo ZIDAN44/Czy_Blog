@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { ConfirmProvider } from '@/components/ConfirmDialog';
 
 export const metadata: Metadata = {
   title: 'Czy Blog Dashboard',
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ConfirmProvider>{children}</ConfirmProvider>
+      </body>
     </html>
   );
 }

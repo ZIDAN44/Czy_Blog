@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, type PostStatus } from '@/lib/api';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 interface Row {
   id: string;
@@ -22,6 +23,7 @@ const STATUSES: (PostStatus | 'ALL')[] = [
 ];
 
 export default function PostsPage() {
+  const confirm = useConfirm();
   const [posts, setPosts] = useState<Row[]>([]);
   const [filter, setFilter] = useState<PostStatus | 'ALL'>('ALL');
 
@@ -35,7 +37,14 @@ export default function PostsPage() {
   }, [filter]);
 
   async function remove(id: string) {
-    if (!confirm('Delete this post?')) return;
+    const post = posts.find((p) => p.id === id);
+    const ok = await confirm({
+      title: 'Delete this post?',
+      message: `"${post?.title || 'Untitled'}" will be permanently deleted. This cannot be undone.`,
+      confirmLabel: 'Delete post',
+      tone: 'danger',
+    });
+    if (!ok) return;
     await api(`/api/v1/admin/posts/${id}`, { method: 'DELETE' });
     load();
   }
