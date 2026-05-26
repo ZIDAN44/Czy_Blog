@@ -15,9 +15,6 @@ const bootstrapSchema = z.object({
 });
 
 export async function authRoutes(app: FastifyInstance) {
-  // ─────────────────────────────────────────────────────────────────────
-  // First-run check. Lets the dashboard decide whether to show /signup or /login.
-  // ─────────────────────────────────────────────────────────────────────
   app.get('/bootstrap-status', async () => {
     const count = await prisma.user.count();
     return { needsBootstrap: count === 0 };
@@ -39,11 +36,6 @@ export async function authRoutes(app: FastifyInstance) {
     };
   });
 
-  // ─────────────────────────────────────────────────────────────────────
-  // First-run bootstrap. Creates the SUPER_ADMIN.
-  // Returns 409 once any user exists — further accounts must be created by an
-  // admin from the dashboard. There is no public sign-up.
-  // ─────────────────────────────────────────────────────────────────────
   app.post('/bootstrap', async (req, reply) => {
     const existing = await prisma.user.count();
     if (existing > 0) {

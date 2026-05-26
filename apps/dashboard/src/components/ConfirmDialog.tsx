@@ -27,22 +27,22 @@ export function useConfirm() {
 
 const TONE_STYLES: Record<ConfirmTone, { btn: string; ring: string; icon: string }> = {
   default: {
-    btn: 'bg-slate-900 hover:bg-slate-800 text-white',
-    ring: 'bg-slate-100 text-slate-600',
+    btn: 'bg-gradient-to-b from-indigo-600 to-indigo-700 hover:brightness-110 text-white shadow-sm',
+    ring: 'bg-indigo-100 text-indigo-700',
     icon: 'i',
   },
   danger: {
-    btn: 'bg-red-600 hover:bg-red-700 text-white',
+    btn: 'bg-gradient-to-b from-red-600 to-red-700 hover:brightness-110 text-white shadow-sm',
     ring: 'bg-red-100 text-red-600',
     icon: '!',
   },
   warning: {
-    btn: 'bg-amber-500 hover:bg-amber-600 text-white',
+    btn: 'bg-gradient-to-b from-amber-500 to-amber-600 hover:brightness-110 text-white shadow-sm',
     ring: 'bg-amber-100 text-amber-700',
     icon: '!',
   },
   success: {
-    btn: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+    btn: 'bg-gradient-to-b from-emerald-600 to-emerald-700 hover:brightness-110 text-white shadow-sm',
     ring: 'bg-emerald-100 text-emerald-700',
     icon: '✓',
   },
@@ -84,14 +84,14 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       {opts && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_120ms_ease-out]"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-fadeIn"
           onClick={() => close(false)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-title"
         >
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-[popIn_140ms_ease-out]"
+            className="bg-white rounded-2xl shadow-2xl ring-1 ring-slate-900/5 max-w-md w-full p-6 animate-popIn"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-4">
@@ -113,26 +113,19 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             <div className="mt-6 flex justify-end gap-2">
               <button
                 onClick={() => close(false)}
-                className="px-4 py-2 rounded-lg border bg-white text-sm hover:bg-slate-50"
+                className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium hover:bg-slate-50 transition-colors"
               >
                 {opts.cancelLabel ?? 'Cancel'}
               </button>
               <button
                 ref={confirmBtnRef}
                 onClick={() => close(true)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${tone.btn}`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tone.btn}`}
               >
                 {opts.confirmLabel ?? 'Confirm'}
               </button>
             </div>
           </div>
-          <style>{`
-            @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-            @keyframes popIn {
-              from { opacity: 0; transform: scale(0.96) translateY(4px) }
-              to { opacity: 1; transform: scale(1) translateY(0) }
-            }
-          `}</style>
         </div>
       )}
     </Ctx.Provider>

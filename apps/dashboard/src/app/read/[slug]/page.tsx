@@ -26,33 +26,88 @@ async function fetchPost(slug: string): Promise<PostDetail | null> {
   return data;
 }
 
-// Next.js 16: dynamic route params are async — must be awaited before use.
 export default async function ReadPost({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = await fetchPost(slug);
   if (!post) notFound();
 
+  const initials = post.author.name
+    .split(' ')
+    .map((s) => s[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
-    <article className="space-y-6">
-      <Link href="/read" className="text-sm text-slate-500 hover:underline">
+    <article className="space-y-8">
+      <Link
+        href="/read"
+        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+      >
         ← All posts
       </Link>
-      <header className="space-y-3">
-        <h1 className="text-4xl font-bold leading-tight">{post.title}</h1>
-        <p className="text-sm text-slate-500">
-          by {post.author.name}
-          {post.published_date && ` · ${new Date(post.published_date).toLocaleDateString()}`}
-          {post.category && ` · ${post.category.name}`}
-        </p>
-        {post.excerpt && <p className="text-lg text-slate-600 italic">{post.excerpt}</p>}
-        {post.cover_image && <img src={post.cover_image} alt="" className="rounded-xl w-full" />}
+
+      <header className="space-y-5">
+        {post.category && (
+          <span className="text-[10px] uppercase tracking-widest text-indigo-600 font-semibold">
+            {post.category.name}
+          </span>
+        )}
+        <h1 className="text-4xl sm:text-5xl font-semibold leading-[1.1] tracking-tight">
+          {post.title}
+        </h1>
+        {post.excerpt && <p className="text-lg text-slate-600 leading-relaxed">{post.excerpt}</p>}
+        <div className="flex items-center gap-3 pt-2">
+          {post.author.avatar_url ? (
+            <img
+              src={post.author.avatar_url}
+              alt=""
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <span className="grid place-items-center w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-semibold">
+              {initials}
+            </span>
+          )}
+          <div className="text-sm">
+            <div className="font-medium">{post.author.name}</div>
+            <div className="text-xs text-slate-500">
+              {post.published_date &&
+                new Date(post.published_date).toLocaleDateString(undefined, {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              {post.view_count > 0 && ` · ${post.view_count.toLocaleString()} views`}
+            </div>
+          </div>
+        </div>
       </header>
-      <div className="ProseMirror">
+
+      {post.cover_image && (
+        <img
+          src={post.cover_image}
+          alt=""
+          className="rounded-2xl w-full aspect-video object-cover"
+        />
+      )}
+
+      <div className="ProseMirror prose-zinc max-w-none text-[17px] leading-8">
         <TiptapRender doc={post.content} />
       </div>
+
       {post.tags.length > 0 && (
-        <footer className="pt-6 border-t text-xs text-slate-500">
-          Tagged: {post.tags.map((t) => `#${t.slug}`).join(' ')}
+        <footer className="pt-8 border-t border-slate-200/60">
+          <div className="flex flex-wrap gap-2">
+            {post.tags.map((t) => (
+              <span
+                key={t.slug}
+                className="text-xs text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors rounded-full px-3 py-1"
+              >
+                #{t.slug}
+              </span>
+            ))}
+          </div>
         </footer>
       )}
     </article>

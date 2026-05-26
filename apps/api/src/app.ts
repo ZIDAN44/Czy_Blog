@@ -59,7 +59,6 @@ export async function buildApp() {
 
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof ZodError) {
-      // Zod 4: instance .flatten() is deprecated → use z.flattenError().
       return reply.code(400).send({ error: 'ValidationError', issues: z.flattenError(err) });
     }
     app.log.error(err);

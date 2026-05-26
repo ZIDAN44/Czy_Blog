@@ -5,16 +5,12 @@ import { prisma, Role } from '../db.js';
 import { atLeast, requireRole } from '../lib/rbac.js';
 import { generateApiKey } from '../lib/apiKey.js';
 
-// Zod 4: `z.enum()` now accepts native TS enums directly. `z.nativeEnum()`
-// is deprecated.
 const roleEnum = z.enum(Role);
 
 export async function userRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
 
-  // ───────────────────────────────────────────────────────────────────────
-  // List users — visible to EDITOR+ (they need to see authors for content review)
-  // ───────────────────────────────────────────────────────────────────────
+  // List users visible to EDITOR+ (they need to see authors for content review)
   app.get('/', { preHandler: [requireRole(Role.EDITOR)] }, async () => {
     const users = await prisma.user.findMany({
       select: { id: true, email: true, name: true, role: true, createdAt: true },
@@ -23,10 +19,8 @@ export async function userRoutes(app: FastifyInstance) {
     return { data: users };
   });
 
-  // ───────────────────────────────────────────────────────────────────────
-  // Create user — SUPER_ADMIN only. This is the only path to new accounts
-  // after the first-run bootstrap; there is no public registration.
-  // ───────────────────────────────────────────────────────────────────────
+  // Create user SUPER_ADMIN only. This is the only path to new accounts
+  // after the first-run bootstrap as there is no public registration.
   app.post('/', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
     const body = z
       .object({
@@ -52,7 +46,7 @@ export async function userRoutes(app: FastifyInstance) {
     return reply.code(201).send({ data: user });
   });
 
-  // Change a user's role — SUPER_ADMIN only. Cannot demote yourself if you are
+  // Change a user's role for SUPER_ADMIN only. Cannot demote yourself if you are
   // the last super-admin (prevents lockout).
   app.patch('/:id/role', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
     const { id } = z.object({ id: z.string() }).parse(req.params);
@@ -97,10 +91,8 @@ export async function userRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  // ───────────────────────────────────────────────────────────────────────
   // API keys for the headless consumer (your personal site).
   // Each user manages their own keys.
-  // ───────────────────────────────────────────────────────────────────────
   app.get('/me/api-keys', async (req) => {
     const keys = await prisma.apiKey.findMany({
       where: { ownerId: req.user.sub },

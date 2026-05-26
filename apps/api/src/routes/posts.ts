@@ -21,7 +21,6 @@ const createSchema = z.object({
   categorySlug: z.string().optional(),
   tagSlugs: z.array(z.string()).optional(),
   status: z.enum(PostStatus).optional(),
-  // Zod 4: ISO formats moved to z.iso.*
   scheduledFor: z.iso.datetime().optional(),
 });
 
@@ -29,7 +28,6 @@ const updateSchema = createSchema
   .partial()
   .extend({ title: z.string().min(1).max(200).optional() });
 
-// Upsert a category by slug. Auto-creates with a humanized name if missing.
 async function resolveCategoryId(input: string): Promise<string> {
   const slug = toSlug(input);
   const name =
@@ -57,9 +55,7 @@ async function resolveTagIds(slugs: string[]): Promise<string[]> {
   return [...existing, ...created].map((t) => t.id);
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Public read endpoints — consumed by your personal site
-// ──────────────────────────────────────────────────────────────────────────
+// Public read endpoints
 export async function publicPostRoutes(app: FastifyInstance) {
   app.get('/', async (req, reply) => {
     const q = z
@@ -127,9 +123,7 @@ export async function publicPostRoutes(app: FastifyInstance) {
   });
 }
 
-// ──────────────────────────────────────────────────────────────────────────
 // Authenticated post management endpoints
-// ──────────────────────────────────────────────────────────────────────────
 export async function adminPostRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
 

@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col">
       <Nav />
-      <main className="max-w-6xl mx-auto px-6 py-8 w-full">{children}</main>
+      <main className="max-w-6xl mx-auto px-6 py-10 w-full animate-fadeIn">{children}</main>
     </div>
   );
 }

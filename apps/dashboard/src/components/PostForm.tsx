@@ -27,9 +27,9 @@ interface PostData {
   content: object;
   coverImageUrl: string;
   status: PostStatus;
-  scheduledFor: string; // datetime-local value
+  scheduledFor: string;
   categorySlug: string;
-  tagSlugs: string; // comma list
+  tagSlugs: string;
 }
 
 interface Props {
@@ -144,34 +144,56 @@ export default function PostForm({ postId, initial }: Props) {
     }
   }
 
+  const wordCount = (() => {
+    try {
+      const text = JSON.stringify(form.content).match(/"text":"([^"]*)"/g) ?? [];
+      return text.join(' ').split(/\s+/).filter(Boolean).length;
+    } catch {
+      return 0;
+    }
+  })();
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-4">
-        <input
-          className="w-full text-3xl font-bold bg-transparent outline-none placeholder:text-slate-300"
-          placeholder="Post title"
-          value={form.title}
-          onChange={(e) => set('title', e.target.value)}
-        />
-        <textarea
-          className="w-full border rounded-lg p-3 text-sm"
-          placeholder="Short excerpt (optional)"
-          rows={2}
-          value={form.excerpt}
-          onChange={(e) => set('excerpt', e.target.value)}
-        />
-        <BlockEditor initialContent={form.content} onChange={(c) => set('content', c)} />
+        <div className="card p-6 space-y-4">
+          <input
+            className="w-full text-3xl font-semibold tracking-tight bg-transparent outline-none placeholder:text-slate-300"
+            placeholder="Untitled post"
+            value={form.title}
+            onChange={(e) => set('title', e.target.value)}
+          />
+          <textarea
+            className="w-full text-sm bg-transparent outline-none placeholder:text-slate-400 resize-none border-l-2 border-slate-200 pl-3"
+            placeholder="Add a short excerpt to grab readers (optional)"
+            rows={2}
+            value={form.excerpt}
+            onChange={(e) => set('excerpt', e.target.value)}
+          />
+        </div>
+        <div className="card p-6">
+          <BlockEditor initialContent={form.content} onChange={(c) => set('content', c)} />
+          <div className="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-100">
+            {wordCount.toLocaleString()} words
+          </div>
+        </div>
       </div>
 
-      <aside className="space-y-4">
-        <section className="bg-white border rounded-xl p-4 space-y-3">
-          <h3 className="font-semibold text-sm uppercase text-slate-500">Publish</h3>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+      <aside className="space-y-4 lg:sticky lg:top-20 self-start">
+        <section className="card p-5 space-y-3">
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Publish
+          </h3>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             <button
               disabled={busy || !form.title}
               onClick={() => save('DRAFT')}
-              className="px-3 py-1.5 rounded-lg border bg-white text-sm"
+              className="btn btn-secondary flex-1"
             >
               Save draft
             </button>
@@ -179,7 +201,7 @@ export default function PostForm({ postId, initial }: Props) {
               <button
                 disabled={busy || !form.title}
                 onClick={() => save('PUBLISHED')}
-                className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm"
+                className="btn btn-primary flex-1"
               >
                 Publish
               </button>
@@ -187,59 +209,73 @@ export default function PostForm({ postId, initial }: Props) {
               <button
                 disabled={busy || !form.title}
                 onClick={() => save('PENDING_REVIEW')}
-                className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-sm"
+                className="btn btn-primary flex-1"
+                style={{
+                  background: 'linear-gradient(180deg, #f59e0b 0%, #d97706 100%)',
+                }}
               >
                 Submit for review
               </button>
             )}
           </div>
           {canPublish && (
-            <div className="space-y-1.5 pt-2 border-t">
-              <label className="text-sm text-slate-500">Schedule for</label>
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <label className="text-xs font-medium text-slate-600">Schedule for</label>
               <input
                 type="datetime-local"
-                className="w-full border rounded-lg px-2 py-1.5 text-sm"
+                className="input"
                 value={form.scheduledFor}
                 onChange={(e) => set('scheduledFor', e.target.value)}
               />
               <button
                 disabled={busy || !form.title || !form.scheduledFor}
                 onClick={() => save('SCHEDULED')}
-                className="w-full px-3 py-1.5 rounded-lg border text-sm"
+                className="btn btn-secondary w-full"
               >
-                Schedule
+                Schedule post
               </button>
             </div>
           )}
         </section>
 
-        <section className="bg-white border rounded-xl p-4 space-y-2">
-          <h3 className="font-semibold text-sm uppercase text-slate-500">Meta</h3>
-          <label className="block text-sm">
-            Cover image URL
+        <section className="card p-5 space-y-3">
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Meta
+          </h3>
+          <label className="block">
+            <span className="text-xs font-medium text-slate-600">Cover image URL</span>
             <input
-              className="mt-1 w-full border rounded-lg px-2 py-1.5"
+              className="input mt-1"
               value={form.coverImageUrl}
               onChange={(e) => set('coverImageUrl', e.target.value)}
+              placeholder="https://…"
             />
           </label>
-          <label className="block text-sm">
-            Category slug
+          {form.coverImageUrl && (
+            <img
+              src={form.coverImageUrl}
+              alt=""
+              className="rounded-lg w-full aspect-video object-cover border border-slate-100"
+            />
+          )}
+          <label className="block">
+            <span className="text-xs font-medium text-slate-600">Category slug</span>
             <input
-              className="mt-1 w-full border rounded-lg px-2 py-1.5"
+              className="input mt-1"
               value={form.categorySlug}
               onChange={(e) => set('categorySlug', e.target.value)}
               placeholder="engineering"
             />
           </label>
-          <label className="block text-sm">
-            Tags (comma-separated)
+          <label className="block">
+            <span className="text-xs font-medium text-slate-600">Tags</span>
             <input
-              className="mt-1 w-full border rounded-lg px-2 py-1.5"
+              className="input mt-1"
               value={form.tagSlugs}
               onChange={(e) => set('tagSlugs', e.target.value)}
               placeholder="rust, async"
             />
+            <span className="text-[10px] text-slate-400 mt-1 inline-block">Comma-separated.</span>
           </label>
         </section>
       </aside>

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import PostForm from '@/components/PostForm';
 import { api, type PostStatus } from '@/lib/api';
 
@@ -28,11 +29,16 @@ export default function EditPostPage() {
     })().catch(console.error);
   }, [id]);
 
-  if (!post) return <p className="text-slate-500">Loading…</p>;
+  if (!post) return <p className="text-slate-500 text-sm">Loading…</p>;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Edit post</h1>
+    <div className="space-y-6">
+      <div>
+        <Link href="/dashboard/posts" className="text-xs text-slate-500 hover:text-slate-900">
+          ← Back to posts
+        </Link>
+        <h1 className="text-3xl font-semibold tracking-tight mt-1">Edit post</h1>
+      </div>
       <PostForm
         postId={post.id}
         initial={{

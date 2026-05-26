@@ -1,30 +1,189 @@
-/* Tailwind v4: one import replaces the v3 `@tailwind base/components/utilities`
-   directives. Content sources are auto-detected; no config file needed for
-   default setups. */
 @import 'tailwindcss';
+
+@theme {
+  --color-ink-50: #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-300: #cbd5e1;
+  --color-ink-400: #94a3b8;
+  --color-ink-500: #64748b;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+  --color-ink-950: #020617;
+
+  --color-accent-50: #eef2ff;
+  --color-accent-100: #e0e7ff;
+  --color-accent-200: #c7d2fe;
+  --color-accent-500: #6366f1;
+  --color-accent-600: #4f46e5;
+  --color-accent-700: #4338ca;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
 
 html,
 body {
   height: 100%;
 }
+
 body {
-  @apply bg-slate-50 text-slate-900;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(99, 102, 241, 0.08), transparent 60%),
+    radial-gradient(800px 500px at -10% 110%, rgba(14, 165, 233, 0.06), transparent 60%), #fafafa;
+  color: #0f172a;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+/* ------- design utilities ------- */
+.card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  box-shadow:
+    0 1px 0 rgba(15, 23, 42, 0.02),
+    0 8px 24px -12px rgba(15, 23, 42, 0.08);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: 10px;
+  padding: 0.5rem 0.875rem;
+  transition: all 140ms ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 1px 2px rgba(67, 56, 202, 0.4);
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.btn-secondary {
+  background: #fff;
+  border-color: rgba(15, 23, 42, 0.1);
+  color: #0f172a;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.18);
+}
+.btn-ghost {
+  background: transparent;
+  color: #475569;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.04);
+  color: #0f172a;
+}
+.btn-danger {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.2);
+}
+.btn-danger:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+.input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.7;
+}
+.pill-draft {
+  background: #f1f5f9;
+  color: #475569;
+}
+.pill-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+.pill-scheduled {
+  background: #e0f2fe;
+  color: #075985;
+}
+.pill-published {
+  background: #dcfce7;
+  color: #166534;
+}
+.pill-archived {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 /* TipTap editor styles */
 .ProseMirror {
-  @apply min-h-[400px] outline-none;
+  min-height: 400px;
+  outline: none;
 }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  @apply text-slate-400 float-left h-0 pointer-events-none;
+  color: #cbd5e1;
+  float: left;
+  height: 0;
+  pointer-events: none;
 }
 .ProseMirror h1 {
-  @apply text-3xl font-bold mt-6 mb-3;
+  @apply text-3xl font-bold mt-6 mb-3 tracking-tight;
 }
 .ProseMirror h2 {
-  @apply text-2xl font-semibold mt-5 mb-2;
+  @apply text-2xl font-semibold mt-5 mb-2 tracking-tight;
 }
 .ProseMirror h3 {
   @apply text-xl font-semibold mt-4 mb-2;
@@ -39,20 +198,58 @@ body {
   @apply list-decimal pl-6 my-2;
 }
 .ProseMirror blockquote {
-  @apply border-l-4 border-slate-300 pl-4 italic text-slate-700;
+  @apply border-l-4 border-indigo-200 pl-4 italic text-slate-600 my-3;
 }
 .ProseMirror pre {
-  @apply bg-slate-900 text-slate-100 rounded-lg p-4 my-3 overflow-x-auto font-mono text-sm;
+  @apply bg-slate-900 text-slate-100 rounded-xl p-4 my-3 overflow-x-auto font-mono text-sm;
 }
 .ProseMirror code {
-  @apply bg-slate-100 rounded px-1 py-0.5 text-sm font-mono;
+  @apply bg-slate-100 rounded px-1.5 py-0.5 text-sm font-mono text-slate-800;
 }
 .ProseMirror pre code {
-  @apply bg-transparent p-0;
+  @apply bg-transparent p-0 text-slate-100;
 }
 .ProseMirror img {
-  @apply rounded-lg my-3 max-w-full h-auto;
+  @apply rounded-xl my-4 max-w-full h-auto;
 }
 .ProseMirror a {
-  @apply text-blue-600 underline;
+  @apply text-indigo-600 underline decoration-indigo-300 underline-offset-2;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadeIn {
+  animation: fadeIn 160ms ease-out;
+}
+.animate-popIn {
+  animation: popIn 180ms ease-out;
+}
+.animate-slideUp {
+  animation: slideUp 220ms ease-out both;
 }

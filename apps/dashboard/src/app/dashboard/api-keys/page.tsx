@@ -17,6 +17,7 @@ export default function ApiKeysPage() {
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [name, setName] = useState('');
   const [newKey, setNewKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function load() {
     const { data } = await api<{ data: KeyRow[] }>('/api/v1/users/me/api-keys');
@@ -30,7 +31,7 @@ export default function ApiKeysPage() {
     if (!name.trim()) return;
     const ok = await confirm({
       title: 'Create API key?',
-      message: `A new key named "${name.trim()}" will be created. The full key is shown only once — make sure to copy it.`,
+      message: `A new key named "${name.trim()}" will be created. The full key is shown only once so make sure to copy it.`,
       confirmLabel: 'Create key',
       tone: 'default',
     });
@@ -56,59 +57,98 @@ export default function ApiKeysPage() {
     load();
   }
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">API keys</h1>
-      <p className="text-sm text-slate-500">
-        Use these on your personal site to fetch posts via{' '}
-        <code className="bg-slate-100 px-1 rounded">x-api-key</code>.
-      </p>
+  async function copyKey() {
+    if (!newKey) return;
+    await navigator.clipboard.writeText(newKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
-      <div className="bg-white border rounded-xl p-4 space-y-3">
-        <h2 className="font-semibold">Create a new key</h2>
+  return (
+    <div className="space-y-8">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">API keys</h1>
+        <p className="text-sm text-slate-500 mt-1 max-w-xl">
+          Use these on your personal site to fetch posts via the{' '}
+          <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-xs">x-api-key</code>{' '}
+          header.
+        </p>
+      </header>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+          Create a new key
+        </h2>
         <div className="flex gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. czy.dev production"
-            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+            className="input flex-1"
+            onKeyDown={(e) => e.key === 'Enter' && create()}
           />
-          <button onClick={create} className="bg-slate-900 text-white rounded-lg px-3 py-2 text-sm">
-            Create
+          <button onClick={create} disabled={!name.trim()} className="btn btn-primary">
+            Create key
           </button>
         </div>
         {newKey && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-            <p className="font-medium mb-1">Copy this key now — it won't be shown again.</p>
-            <code className="block break-all bg-white border rounded p-2 text-xs">{newKey}</code>
-            <button className="text-xs mt-2 underline" onClick={() => setNewKey(null)}>
-              Dismiss
-            </button>
+          <div className="rounded-xl p-4 text-sm bg-gradient-to-br from-amber-50 to-amber-50/40 border border-amber-200/60 animate-slideUp">
+            <div className="flex items-start gap-3">
+              <span className="grid place-items-center w-7 h-7 rounded-full bg-amber-500 text-white font-bold flex-shrink-0">
+                !
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-amber-900">
+                  Copy this key now as it won't be shown again.
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <code className="flex-1 bg-white border border-amber-200 rounded-lg p-2 text-xs font-mono break-all">
+                    {newKey}
+                  </code>
+                  <button onClick={copyKey} className="btn btn-secondary text-xs">
+                    {copied ? '✓ Copied' : 'Copy'}
+                  </button>
+                </div>
+                <button
+                  className="text-xs mt-2 text-amber-700 hover:underline"
+                  onClick={() => setNewKey(null)}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="bg-white border rounded-xl divide-y">
+      <section className="card divide-y divide-slate-100 overflow-hidden">
         {keys.map((k) => (
-          <div key={k.id} className="flex items-center gap-3 px-4 py-3 text-sm">
-            <div className="flex-1">
-              <div className="font-medium">{k.name}</div>
-              <div className="text-xs text-slate-500">
-                <code>{k.prefix}…</code> · created {new Date(k.createdAt).toLocaleDateString()}
+          <div key={k.id} className="flex items-center gap-3 px-5 py-4 text-sm">
+            <span className="grid place-items-center w-9 h-9 rounded-lg bg-slate-100 text-slate-500 font-mono text-xs">
+              ⚿
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium flex items-center gap-2">
+                <span className="truncate">{k.name}</span>
+                {k.revokedAt && <span className="pill pill-archived">revoked</span>}
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5">
+                <code className="font-mono">{k.prefix}…</code> · created{' '}
+                {new Date(k.createdAt).toLocaleDateString()}
                 {k.lastUsedAt && ` · last used ${new Date(k.lastUsedAt).toLocaleString()}`}
               </div>
             </div>
-            {k.revokedAt ? (
-              <span className="text-xs text-red-600">Revoked</span>
-            ) : (
-              <button onClick={() => revoke(k.id)} className="text-xs text-red-600 hover:underline">
+            {!k.revokedAt && (
+              <button onClick={() => revoke(k.id)} className="btn btn-danger text-xs">
                 Revoke
               </button>
             )}
           </div>
         ))}
-        {keys.length === 0 && <p className="px-4 py-6 text-sm text-slate-500">No keys yet.</p>}
-      </div>
+        {keys.length === 0 && (
+          <p className="px-5 py-10 text-sm text-slate-500 text-center">No keys yet.</p>
+        )}
+      </section>
     </div>
   );
 }
