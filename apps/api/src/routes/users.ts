@@ -24,12 +24,28 @@ export async function userRoutes(app: FastifyInstance) {
   app.post('/', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
     const body = z
       .object({
-        email: z.string().email(),
-        name: z.string().min(1),
-        password: z.string().min(8),
+        email: z
+          .string()
+          .email()
+          .transform((s) => s.trim().toLowerCase()),
+        name: z.string().min(1).max(100),
+        password: z.string().min(8).max(200),
         role: roleEnum,
       })
       .parse(req.body);
+
+    // SUPER_ADMIN creation must be deliberate — block accidental privilege
+    // escalation through this endpoint by requiring the caller to be the
+    // one and only SA inviting another SA. (requireRole already enforces
+    // SUPER_ADMIN, but we also forbid using POST to mint additional
+    // SUPER_ADMINs unless explicitly intended — keep it simple here: allow
+    // but log.)
+    if (body.role === Role.SUPER_ADMIN) {
+      req.log.warn(
+        { actor: req.user.sub, target: body.email },
+        'super-admin granting SUPER_ADMIN role to new user',
+      );
+    }
 
     const existing = await prisma.user.findUnique({ where: { email: body.email } });
     if (existing) return reply.code(409).send({ error: 'Email in use' });

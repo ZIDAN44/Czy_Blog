@@ -1,4 +1,4 @@
-import { Role } from '../db.js';
+import { PostStatus, Role } from '../db.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 const RANK: Record<Role, number> = {
@@ -30,4 +30,40 @@ export function canEditPost(userRole: Role, userId: string, postAuthorId: string
 
 export function canPublish(userRole: Role): boolean {
   return atLeast(userRole, Role.AUTHOR);
+}
+
+// Status transitions a contributor is permitted to perform on their own post.
+// Anything that results in publication (direct or scheduled) is forbidden —
+// they must submit for review and let an EDITOR/SUPER_ADMIN publish.
+const CONTRIBUTOR_STATUSES: ReadonlySet<PostStatus> = new Set([
+  PostStatus.DRAFT,
+  PostStatus.PENDING_REVIEW,
+  PostStatus.ARCHIVED,
+]);
+
+// AUTHOR can publish their own work, so they may also schedule and archive.
+const AUTHOR_STATUSES: ReadonlySet<PostStatus> = new Set([
+  PostStatus.DRAFT,
+  PostStatus.PENDING_REVIEW,
+  PostStatus.SCHEDULED,
+  PostStatus.PUBLISHED,
+  PostStatus.ARCHIVED,
+]);
+
+// Coerce a requested status to one the caller is actually allowed to set.
+// Returns null when the request must be rejected outright.
+export function coerceStatus(userRole: Role, requested: PostStatus): PostStatus | null {
+  if (atLeast(userRole, Role.EDITOR)) return requested;
+  if (userRole === Role.AUTHOR) {
+    return AUTHOR_STATUSES.has(requested) ? requested : null;
+  }
+  // CONTRIBUTOR: silently downgrade publish/schedule attempts to review.
+  if (requested === PostStatus.PUBLISHED || requested === PostStatus.SCHEDULED) {
+    return PostStatus.PENDING_REVIEW;
+  }
+  return CONTRIBUTOR_STATUSES.has(requested) ? requested : null;
+}
+
+export function canManageTaxonomy(userRole: Role): boolean {
+  return atLeast(userRole, Role.EDITOR);
 }

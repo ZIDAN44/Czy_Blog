@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma, PostStatus, Role, Prisma } from '../db.js';
 import { toSlug, uniquePostSlug } from '../lib/slug.js';
-import { canEditPost, canPublish } from '../lib/rbac.js';
+import { canEditPost, canManageTaxonomy, coerceStatus } from '../lib/rbac.js';
 import { serializePost } from '../lib/serialize.js';
 
 const postInclude = {
@@ -28,31 +28,37 @@ const updateSchema = createSchema
   .partial()
   .extend({ title: z.string().min(1).max(200).optional() });
 
-async function resolveCategoryId(input: string): Promise<string> {
+// Resolve a category by slug. Only EDITOR+ may implicitly create one — for
+// lower roles we require the slug to already exist so they cannot mint new
+// taxonomy entries through the post-create back door.
+async function resolveCategoryId(input: string, role: Role): Promise<string | null> {
   const slug = toSlug(input);
+  const existing = await prisma.category.findUnique({ where: { slug } });
+  if (existing) return existing.id;
+  if (!canManageTaxonomy(role)) return null;
   const name =
     input
       .replace(/[-_]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/\b\w/g, (c) => c.toUpperCase()) || slug;
-  const cat = await prisma.category.upsert({
-    where: { slug },
-    update: {},
-    create: { slug, name },
-  });
+  const cat = await prisma.category.create({ data: { slug, name } });
   return cat.id;
 }
 
-async function resolveTagIds(slugs: string[]): Promise<string[]> {
+async function resolveTagIds(slugs: string[], role: Role): Promise<string[]> {
   if (!slugs.length) return [];
   const existing = await prisma.tag.findMany({ where: { slug: { in: slugs } } });
-  const existingSlugs = new Set(existing.map((t) => t.slug));
-  const toCreate = slugs.filter((s) => !existingSlugs.has(s));
-  const created = await Promise.all(
-    toCreate.map((slug) => prisma.tag.create({ data: { slug, name: slug } })),
-  );
-  return [...existing, ...created].map((t) => t.id);
+  if (canManageTaxonomy(role)) {
+    const existingSlugs = new Set(existing.map((t) => t.slug));
+    const toCreate = slugs.filter((s) => !existingSlugs.has(s));
+    const created = await Promise.all(
+      toCreate.map((slug) => prisma.tag.create({ data: { slug, name: slug } })),
+    );
+    return [...existing, ...created].map((t) => t.id);
+  }
+  // Lower roles: only attach tags that already exist; ignore unknown slugs.
+  return existing.map((t) => t.id);
 }
 
 // Public read endpoints
@@ -172,17 +178,27 @@ export async function adminPostRoutes(app: FastifyInstance) {
 
   app.post('/', async (req, reply) => {
     const body = createSchema.parse(req.body);
-    const slug = await uniquePostSlug(body.title);
-
-    const categoryId = body.categorySlug ? await resolveCategoryId(body.categorySlug) : null;
 
     const requestedStatus = body.status ?? PostStatus.DRAFT;
-    const finalStatus =
-      requestedStatus === PostStatus.PUBLISHED && !canPublish(req.user.role)
-        ? PostStatus.PENDING_REVIEW
-        : requestedStatus;
+    const finalStatus = coerceStatus(req.user.role, requestedStatus);
+    if (finalStatus === null) {
+      return reply.code(403).send({ error: 'Not allowed to set that status' });
+    }
 
-    const tagIds = await resolveTagIds(body.tagSlugs ?? []);
+    // SCHEDULED requires a future scheduledFor — otherwise it's an
+    // instant-publish back door for AUTHOR (the scheduler picks it up on next tick).
+    if (finalStatus === PostStatus.SCHEDULED) {
+      const when = body.scheduledFor ? new Date(body.scheduledFor) : null;
+      if (!when || when.getTime() <= Date.now()) {
+        return reply.code(400).send({ error: 'scheduledFor must be in the future' });
+      }
+    }
+
+    const slug = await uniquePostSlug(body.title);
+    const categoryId = body.categorySlug
+      ? await resolveCategoryId(body.categorySlug, req.user.role)
+      : null;
+    const tagIds = await resolveTagIds(body.tagSlugs ?? [], req.user.role);
 
     const post = await prisma.post.create({
       data: {
@@ -193,7 +209,10 @@ export async function adminPostRoutes(app: FastifyInstance) {
         coverImageUrl: body.coverImageUrl,
         status: finalStatus,
         publishedAt: finalStatus === PostStatus.PUBLISHED ? new Date() : null,
-        scheduledFor: body.scheduledFor ? new Date(body.scheduledFor) : null,
+        scheduledFor:
+          finalStatus === PostStatus.SCHEDULED && body.scheduledFor
+            ? new Date(body.scheduledFor)
+            : null,
         authorId: req.user.sub,
         categoryId,
         tags: { create: tagIds.map((tagId) => ({ tagId })) },
@@ -224,21 +243,33 @@ export async function adminPostRoutes(app: FastifyInstance) {
       data.scheduledFor = body.scheduledFor ? new Date(body.scheduledFor) : null;
 
     if (body.status) {
-      const target = body.status;
-      if (target === PostStatus.PUBLISHED && !canPublish(req.user.role)) {
-        data.status = PostStatus.PENDING_REVIEW;
-      } else {
-        data.status = target;
-        if (target === PostStatus.PUBLISHED && !post.publishedAt) data.publishedAt = new Date();
+      const target = coerceStatus(req.user.role, body.status);
+      if (target === null) {
+        return reply.code(403).send({ error: 'Not allowed to set that status' });
       }
+      data.status = target;
+      if (target === PostStatus.SCHEDULED) {
+        const when =
+          body.scheduledFor !== undefined
+            ? body.scheduledFor
+              ? new Date(body.scheduledFor)
+              : null
+            : post.scheduledFor;
+        if (!when || when.getTime() <= Date.now()) {
+          return reply.code(400).send({ error: 'scheduledFor must be in the future' });
+        }
+      }
+      if (target === PostStatus.PUBLISHED && !post.publishedAt) data.publishedAt = new Date();
     }
 
     if (body.categorySlug !== undefined) {
-      data.categoryId = body.categorySlug ? await resolveCategoryId(body.categorySlug) : null;
+      data.categoryId = body.categorySlug
+        ? await resolveCategoryId(body.categorySlug, req.user.role)
+        : null;
     }
 
     if (body.tagSlugs) {
-      const tagIds = await resolveTagIds(body.tagSlugs);
+      const tagIds = await resolveTagIds(body.tagSlugs, req.user.role);
       await prisma.postTag.deleteMany({ where: { postId: id } });
       data.tags = { create: tagIds.map((tagId) => ({ tagId })) };
     }

@@ -3,16 +3,26 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma, Role } from '../db.js';
 
+const emailField = z
+  .string()
+  .email()
+  .transform((s) => s.trim().toLowerCase());
+
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: emailField,
+  password: z.string().min(1).max(200),
 });
 
 const bootstrapSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(1),
+  email: emailField,
+  password: z.string().min(8).max(200),
+  name: z.string().min(1).max(100),
 });
+
+// A pre-computed bcrypt hash of a random string. Used to keep the login path
+// taking roughly constant time when the email is not in the DB, so attackers
+// can't enumerate accounts via response timing.
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password-' + Math.random(), 10);
 
 export async function authRoutes(app: FastifyInstance) {
   app.get('/bootstrap-status', async () => {
@@ -23,7 +33,9 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/login', async (req, reply) => {
     const body = loginSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email: body.email } });
-    if (!user || !(await bcrypt.compare(body.password, user.passwordHash))) {
+    const hash = user?.passwordHash ?? DUMMY_HASH;
+    const ok = await bcrypt.compare(body.password, hash);
+    if (!user || !ok) {
       return reply.code(401).send({ error: 'Invalid credentials' });
     }
     const token = app.jwt.sign(

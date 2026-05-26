@@ -36,17 +36,39 @@ declare module 'fastify' {
 export default fp(async (app: FastifyInstance) => {
   await app.register(jwt, { secret: config.jwtSecret });
 
+  // Verify the JWT, then re-load the user's role from the DB so that role
+  // changes (demotions, deletions) take effect immediately rather than
+  // waiting up to the 7-day token expiry. If the user no longer exists,
+  // the token is rejected.
   app.decorate('authenticate', async (req, reply) => {
     try {
       await req.jwtVerify();
     } catch {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
+    const claims = req.user as { sub?: string };
+    if (!claims?.sub) return reply.code(401).send({ error: 'Unauthorized' });
+    const fresh = await prisma.user.findUnique({
+      where: { id: claims.sub },
+      select: { id: true, email: true, role: true },
+    });
+    if (!fresh) return reply.code(401).send({ error: 'Account no longer exists' });
+    req.user = { sub: fresh.id, email: fresh.email, role: fresh.role };
   });
 
   app.decorate('optionalAuth', async (req) => {
     try {
       await req.jwtVerify();
+      const claims = req.user as { sub?: string };
+      if (claims?.sub) {
+        const fresh = await prisma.user.findUnique({
+          where: { id: claims.sub },
+          select: { id: true, email: true, role: true },
+        });
+        if (fresh) {
+          req.user = { sub: fresh.id, email: fresh.email, role: fresh.role };
+        }
+      }
     } catch {
       /* anonymous */
     }

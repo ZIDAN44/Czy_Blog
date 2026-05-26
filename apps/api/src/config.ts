@@ -6,10 +6,22 @@ function required(name: string, fallback?: string): string {
   return v;
 }
 
+const DEV_JWT_SECRET = 'dev-jwt-secret-change-me';
+const isProd = process.env.NODE_ENV === 'production';
+const jwtSecret = process.env.JWT_SECRET ?? (isProd ? '' : DEV_JWT_SECRET);
+if (!jwtSecret || jwtSecret === DEV_JWT_SECRET) {
+  if (isProd) {
+    throw new Error('JWT_SECRET must be set to a strong, unique value in production');
+  }
+}
+if (jwtSecret.length < 32 && isProd) {
+  throw new Error('JWT_SECRET must be at least 32 characters in production');
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 4000),
   host: process.env.HOST ?? '0.0.0.0',
-  jwtSecret: required('JWT_SECRET', 'dev-jwt-secret-change-me'),
+  jwtSecret,
   databaseUrl: required('DATABASE_URL'),
   corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
     .split(',')
