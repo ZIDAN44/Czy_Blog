@@ -20,7 +20,8 @@ export default function Overview() {
     PUBLISHED: 0,
     ARCHIVED: 0,
   });
-  const [recent, setRecent] = useState<PostSummary[]>([]);
+  const [allPosts, setAllPosts] = useState<PostSummary[]>([]);
+  const [filter, setFilter] = useState<PostStatus | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -34,20 +35,36 @@ export default function Overview() {
       } as Record<PostStatus, number>;
       for (const p of data) tally[p.status]++;
       setCounts(tally);
-      setRecent(data.slice(0, 5));
+      setAllPosts(data);
     })().catch(console.error);
   }, []);
+
+  const recent = (filter ? allPosts.filter((p) => p.status === filter) : allPosts).slice(0, 5);
 
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Overview</h1>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {(Object.keys(counts) as PostStatus[]).map((k) => (
-          <div key={k} className="bg-white rounded-xl border p-4">
-            <div className="text-xs uppercase text-slate-500">{k}</div>
-            <div className="text-2xl font-bold mt-1">{counts[k]}</div>
-          </div>
-        ))}
+        {(Object.keys(counts) as PostStatus[]).map((k) => {
+          const active = filter === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setFilter(active ? null : k)}
+              className={`text-left rounded-xl border p-4 transition-colors ${
+                active
+                  ? 'bg-slate-900 text-white border-slate-900'
+                  : 'bg-white hover:bg-slate-50 hover:border-slate-300'
+              }`}
+            >
+              <div className={`text-xs uppercase ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                {k}
+              </div>
+              <div className="text-2xl font-bold mt-1">{counts[k]}</div>
+            </button>
+          );
+        })}
       </div>
 
       <section>
