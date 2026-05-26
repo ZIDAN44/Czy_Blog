@@ -309,6 +309,7 @@ interface Props {
 
 export default function BlockEditor({ initialContent, onChange }: Props) {
   const [linkOpen, setLinkOpen] = useState(false);
+  const [, setTick] = useState(0);
 
   const editor = useEditor({
     extensions: [
@@ -337,6 +338,8 @@ export default function BlockEditor({ initialContent, onChange }: Props) {
     content: initialContent ?? { type: 'doc', content: [{ type: 'paragraph' }] },
     immediatelyRender: false,
     onUpdate: ({ editor }) => onChange(editor.getJSON()),
+    onSelectionUpdate: () => setTick((t) => t + 1),
+    onTransaction: () => setTick((t) => t + 1),
   });
 
   if (!editor)
