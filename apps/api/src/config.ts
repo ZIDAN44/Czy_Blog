@@ -27,7 +27,7 @@ export const config = {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
-  publicSiteUrl: process.env.PUBLIC_SITE_URL ?? 'http://localhost:4000',
+  publicSiteUrl: process.env.PUBLIC_SITE_URL ?? 'http://localhost:3000',
   uploadDir: process.env.UPLOAD_DIR ?? './uploads',
   publicUploadBaseUrl: process.env.PUBLIC_UPLOAD_BASE_URL ?? 'http://localhost:4000/uploads',
 };

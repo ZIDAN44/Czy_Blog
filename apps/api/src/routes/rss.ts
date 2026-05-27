@@ -23,7 +23,7 @@ export async function rssRoutes(app: FastifyInstance) {
         (p) => `
       <item>
         <title>${esc(p.title)}</title>
-        <link>${config.publicSiteUrl}/posts/${p.slug}</link>
+        <link>${config.publicSiteUrl}/read/${p.slug}</link>
         <guid isPermaLink="false">${p.id}</guid>
         <pubDate>${p.publishedAt?.toUTCString() ?? ''}</pubDate>
         <author>${esc(p.author.name)}</author>
