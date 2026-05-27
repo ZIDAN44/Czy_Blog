@@ -5,7 +5,7 @@ import { config } from '../config.js';
 function esc(s: string): string {
   return s.replace(
     /[<>&'"]/g,
-    (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!,
+    (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&#39;', '"': '&quot;' })[c]!,
   );
 }
 
