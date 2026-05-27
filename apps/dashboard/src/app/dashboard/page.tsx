@@ -71,7 +71,7 @@ export default function Overview() {
         </Link>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 stagger">
         {(Object.keys(counts) as PostStatus[]).map((k) => {
           const meta = STATUS_META[k];
           const active = filter === k;
@@ -126,7 +126,7 @@ export default function Overview() {
             View all →
           </Link>
         </div>
-        <div className="card divide-y divide-slate-100 overflow-hidden">
+        <div className="card divide-y divide-slate-100 overflow-hidden stagger">
           {loading && <div className="px-5 py-10 text-sm text-slate-400 text-center">Loading…</div>}
           {!loading && recent.length === 0 && (
             <div className="px-5 py-12 text-center">

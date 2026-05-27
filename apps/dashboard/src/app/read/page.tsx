@@ -37,19 +37,10 @@ export default async function ReadIndex() {
         </p>
       </header>
 
-      {posts.length === 0 && (
-        <div className="card p-10 text-center">
-          <p className="text-slate-500">No published posts yet.</p>
-          <Link href="/dashboard" className="btn btn-primary mt-4">
-            Write the first one
-          </Link>
-        </div>
-      )}
-
       {featured && (
         <Link
           href={`/read/${featured.slug}`}
-          className="block group rounded-2xl overflow-hidden border border-slate-200/60 bg-gradient-to-br from-slate-50 to-white hover:shadow-md transition-all"
+          className="block group rounded-2xl overflow-hidden border border-slate-200/60 bg-gradient-to-br from-slate-50 to-white hover-lift animate-slideUp"
         >
           {featured.cover_image && (
             <div className="aspect-[2/1] overflow-hidden">
@@ -80,12 +71,12 @@ export default async function ReadIndex() {
       )}
 
       {rest.length > 0 && (
-        <ul className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger">
           {rest.map((p) => (
             <li key={p.id}>
               <Link
                 href={`/read/${p.slug}`}
-                className="block group h-full p-6 rounded-2xl border border-slate-200/60 hover:border-slate-300 hover:shadow-sm transition-all"
+                className="block group h-full p-6 rounded-2xl border border-slate-200/60 hover:border-slate-300 hover-lift"
               >
                 <h2 className="text-lg font-semibold tracking-tight group-hover:text-indigo-600 transition-colors">
                   {p.title}

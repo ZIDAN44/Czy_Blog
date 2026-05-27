@@ -123,7 +123,7 @@ export default function PostsPage() {
         </div>
       </div>
 
-      <div className="card divide-y divide-slate-100 overflow-hidden">
+      <div className="card divide-y divide-slate-100 overflow-hidden stagger">
         {loading && <div className="px-5 py-10 text-sm text-slate-400 text-center">Loading…</div>}
         {!loading && filtered.length === 0 && (
           <p className="px-5 py-10 text-sm text-slate-500 text-center">Nothing here yet.</p>

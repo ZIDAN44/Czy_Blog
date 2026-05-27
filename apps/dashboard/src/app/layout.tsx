@@ -3,13 +3,13 @@ import type { Metadata } from 'next';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
 
 export const metadata: Metadata = {
-  title: 'Czy Blog Dashboard',
+  title: 'Czy Blog | Dashboard',
   description: 'Write and publish to Czy Blog',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
