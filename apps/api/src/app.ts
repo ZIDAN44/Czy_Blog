@@ -11,6 +11,7 @@ import authPlugin from './plugins/auth.js';
 import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
 import { adminPostRoutes, publicPostRoutes } from './routes/posts.js';
+import { contentRoutes } from './routes/content.js';
 import { mediaRoutes } from './routes/media.js';
 import { adminTaxonomyRoutes, publicTaxonomyRoutes } from './routes/taxonomy.js';
 import { rssRoutes } from './routes/rss.js';
@@ -52,6 +53,7 @@ export async function buildApp() {
   await app.register(userRoutes, { prefix: '/api/v1/users' });
   await app.register(publicPostRoutes, { prefix: '/api/v1/posts' });
   await app.register(adminPostRoutes, { prefix: '/api/v1/admin/posts' });
+  await app.register(contentRoutes, { prefix: '/api/v1/content' });
   await app.register(mediaRoutes, { prefix: '/api/v1/media' });
   await app.register(publicTaxonomyRoutes, { prefix: '/api/v1' });
   await app.register(adminTaxonomyRoutes, { prefix: '/api/v1/admin' });

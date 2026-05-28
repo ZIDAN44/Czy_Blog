@@ -69,9 +69,7 @@ export default function ApiKeysPage() {
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">API keys</h1>
         <p className="text-sm text-slate-500 mt-1 max-w-xl">
-          Use these on your personal site to fetch posts via the{' '}
-          <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-xs">x-api-key</code>{' '}
-          header.
+          Read-only access to published posts via the Content API.
         </p>
       </header>
 
