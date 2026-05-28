@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, currentUser, type Role } from '@/lib/api';
-import { useConfirm } from '@/components/ConfirmDialog';
+import { useConfirm, useNotify } from '@/components/ConfirmDialog';
 
 interface UserRow {
   id: string;
@@ -31,6 +31,7 @@ const ROLE_COLOR: Record<Role, string> = {
 export default function UsersPage() {
   const router = useRouter();
   const confirm = useConfirm();
+  const notify = useNotify();
   const me = currentUser();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +101,11 @@ export default function UsersPage() {
       await api(`/api/v1/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
       load();
     } catch (e) {
-      alert(errMsg(e, 'Failed to change role'));
+      notify({
+        title: 'Failed to change role',
+        message: errMsg(e, 'Failed to change role'),
+        tone: 'danger',
+      });
     }
   }
 
@@ -117,7 +122,11 @@ export default function UsersPage() {
       await api(`/api/v1/users/${id}`, { method: 'DELETE' });
       load();
     } catch (e) {
-      alert(errMsg(e, 'Failed to delete user'));
+      notify({
+        title: 'Failed to delete user',
+        message: errMsg(e, 'Failed to delete user'),
+        tone: 'danger',
+      });
     }
   }
 

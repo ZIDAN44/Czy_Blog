@@ -11,10 +11,22 @@ export interface ConfirmOptions {
   tone?: ConfirmTone;
 }
 
+export interface NotifyOptions {
+  title: string;
+  message?: string;
+  okLabel?: string;
+  tone?: ConfirmTone;
+}
+
 type Resolver = (ok: boolean) => void;
+
+type DialogState =
+  | { kind: 'confirm'; opts: ConfirmOptions }
+  | { kind: 'notify'; opts: NotifyOptions };
 
 interface ConfirmCtx {
   confirm: (opts: ConfirmOptions) => Promise<boolean>;
+  notify: (opts: NotifyOptions) => Promise<void>;
 }
 
 const Ctx = createContext<ConfirmCtx | null>(null);
@@ -23,6 +35,12 @@ export function useConfirm() {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useConfirm must be used inside <ConfirmProvider>');
   return ctx.confirm;
+}
+
+export function useNotify() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error('useNotify must be used inside <ConfirmProvider>');
+  return ctx.notify;
 }
 
 const TONE_STYLES: Record<ConfirmTone, { btn: string; ring: string; icon: string }> = {
@@ -49,43 +67,52 @@ const TONE_STYLES: Record<ConfirmTone, { btn: string; ring: string; icon: string
 };
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
-  const [opts, setOpts] = useState<ConfirmOptions | null>(null);
+  const [state, setState] = useState<DialogState | null>(null);
   const resolverRef = useRef<Resolver | null>(null);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
       resolverRef.current = resolve;
-      setOpts(options);
+      setState({ kind: 'confirm', opts: options });
+    });
+  }, []);
+
+  const notify = useCallback((options: NotifyOptions) => {
+    return new Promise<void>((resolve) => {
+      resolverRef.current = () => resolve();
+      setState({ kind: 'notify', opts: options });
     });
   }, []);
 
   const close = useCallback((ok: boolean) => {
     resolverRef.current?.(ok);
     resolverRef.current = null;
-    setOpts(null);
+    setState(null);
   }, []);
 
   useEffect(() => {
-    if (!opts) return;
+    if (!state) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') close(false);
+      if (e.key === 'Escape') close(state?.kind === 'notify' ? true : false);
       if (e.key === 'Enter') close(true);
     }
     window.addEventListener('keydown', onKey);
     confirmBtnRef.current?.focus();
     return () => window.removeEventListener('keydown', onKey);
-  }, [opts, close]);
+  }, [state, close]);
 
-  const tone = TONE_STYLES[opts?.tone ?? 'default'];
+  const opts = state?.opts;
+  const isNotify = state?.kind === 'notify';
+  const tone = TONE_STYLES[opts?.tone ?? (isNotify ? 'danger' : 'default')];
 
   return (
-    <Ctx.Provider value={{ confirm }}>
+    <Ctx.Provider value={{ confirm, notify }}>
       {children}
-      {opts && (
+      {state && opts && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-fadeIn"
-          onClick={() => close(false)}
+          onClick={() => close(isNotify ? true : false)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-title"
@@ -111,18 +138,22 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => close(false)}
-                className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium hover:bg-slate-50 transition-colors"
-              >
-                {opts.cancelLabel ?? 'Cancel'}
-              </button>
+              {!isNotify && (
+                <button
+                  onClick={() => close(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium hover:bg-slate-50 transition-colors"
+                >
+                  {(opts as ConfirmOptions).cancelLabel ?? 'Cancel'}
+                </button>
+              )}
               <button
                 ref={confirmBtnRef}
                 onClick={() => close(true)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tone.btn}`}
               >
-                {opts.confirmLabel ?? 'Confirm'}
+                {isNotify
+                  ? ((opts as NotifyOptions).okLabel ?? 'OK')
+                  : ((opts as ConfirmOptions).confirmLabel ?? 'Confirm')}
               </button>
             </div>
           </div>

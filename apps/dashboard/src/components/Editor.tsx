@@ -10,6 +10,7 @@ import { DOMParser as PMDOMParser, type Schema } from '@tiptap/pm/model';
 import { marked } from 'marked';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { useNotify } from '@/components/ConfirmDialog';
 
 const lowlight = createLowlight(common);
 
@@ -144,6 +145,7 @@ function LinkModal({ initialUrl, hasExisting, onClose, onSubmit, onRemove }: Lin
 // Toolbar
 
 function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => void }) {
+  const notify = useNotify();
   const btn = (active: boolean) =>
     `inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg text-sm font-medium transition-colors ${
       active ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-white hover:text-slate-900'
@@ -165,11 +167,11 @@ function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => voi
         });
         editor.chain().focus().setImage({ src: url }).run();
       } catch (e) {
-        alert(`Upload failed: ${(e as Error).message}`);
+        notify({ title: 'Upload failed', message: (e as Error).message, tone: 'danger' });
       }
     };
     input.click();
-  }, [editor]);
+  }, [editor, notify]);
 
   const Divider = () => <span className="w-px bg-slate-200 mx-1 self-stretch" />;
 
