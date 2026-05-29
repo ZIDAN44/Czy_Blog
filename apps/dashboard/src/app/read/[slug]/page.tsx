@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import TiptapRender from '@/components/TiptapRender';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+import { API_URL } from '@/lib/api';
+import { initials } from '@/lib/utils';
 
 interface PostDetail {
   id: string;
@@ -30,13 +30,6 @@ export default async function ReadPost({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const post = await fetchPost(slug);
   if (!post) notFound();
-
-  const initials = post.author.name
-    .split(' ')
-    .map((s) => s[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
 
   return (
     <article className="space-y-8">
@@ -66,7 +59,7 @@ export default async function ReadPost({ params }: { params: Promise<{ slug: str
             />
           ) : (
             <span className="grid place-items-center w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-semibold">
-              {initials}
+              {initials(post.author.name)}
             </span>
           )}
           <div className="text-sm">

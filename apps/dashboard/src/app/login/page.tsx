@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
 import { api, currentUser, setSession, type SessionUser } from '@/lib/api';
+import { errMsg } from '@/lib/utils';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -47,7 +48,7 @@ export default function LoginPage() {
       setSession(token, user);
       router.replace('/dashboard');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Sign-in failed');
+      setError(errMsg(e, 'Sign-in failed'));
     } finally {
       setBusy(false);
     }

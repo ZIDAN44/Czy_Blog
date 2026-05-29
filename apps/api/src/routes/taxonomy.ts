@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma, Role } from '../db.js';
 import { requireRole } from '../lib/rbac.js';
 import { toSlug } from '../lib/slug.js';
+import { idParam } from '../lib/schemas.js';
 
 export async function publicTaxonomyRoutes(app: FastifyInstance) {
   app.get('/categories', async () => {
@@ -30,7 +31,7 @@ export async function adminTaxonomyRoutes(app: FastifyInstance) {
   });
 
   app.delete('/categories/:id', { preHandler: [requireRole(Role.EDITOR)] }, async (req) => {
-    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const { id } = idParam.parse(req.params);
     await prisma.category.delete({ where: { id } });
     return { ok: true };
   });

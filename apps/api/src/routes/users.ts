@@ -4,8 +4,15 @@ import bcrypt from 'bcryptjs';
 import { prisma, Role } from '../db.js';
 import { atLeast, requireRole } from '../lib/rbac.js';
 import { generateApiKey } from '../lib/apiKey.js';
+import { emailField, idParam } from '../lib/schemas.js';
 
 const roleEnum = z.enum(Role);
+
+// True when removing/demoting `id` would leave zero SUPER_ADMINs in the system.
+async function isLastSuperAdmin(id: string): Promise<boolean> {
+  const others = await prisma.user.count({ where: { role: Role.SUPER_ADMIN, NOT: { id } } });
+  return others === 0;
+}
 
 export async function userRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
@@ -24,22 +31,14 @@ export async function userRoutes(app: FastifyInstance) {
   app.post('/', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
     const body = z
       .object({
-        email: z
-          .string()
-          .email()
-          .transform((s) => s.trim().toLowerCase()),
+        email: emailField,
         name: z.string().min(1).max(100),
         password: z.string().min(8).max(200),
         role: roleEnum,
       })
       .parse(req.body);
 
-    // SUPER_ADMIN creation must be deliberate — block accidental privilege
-    // escalation through this endpoint by requiring the caller to be the
-    // one and only SA inviting another SA. (requireRole already enforces
-    // SUPER_ADMIN, but we also forbid using POST to mint additional
-    // SUPER_ADMINs unless explicitly intended — keep it simple here: allow
-    // but log.)
+    // Audit trail when one SUPER_ADMIN grants the same role to another.
     if (body.role === Role.SUPER_ADMIN) {
       req.log.warn(
         { actor: req.user.sub, target: body.email },
@@ -65,14 +64,11 @@ export async function userRoutes(app: FastifyInstance) {
   // Change a user's role for SUPER_ADMIN only. Cannot demote yourself if you are
   // the last super-admin (prevents lockout).
   app.patch('/:id/role', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const { id } = idParam.parse(req.params);
     const { role } = z.object({ role: roleEnum }).parse(req.body);
 
-    if (id === req.user.sub && role !== Role.SUPER_ADMIN) {
-      const others = await prisma.user.count({ where: { role: Role.SUPER_ADMIN, NOT: { id } } });
-      if (others === 0) {
-        return reply.code(400).send({ error: 'Cannot demote the last super admin' });
-      }
+    if (id === req.user.sub && role !== Role.SUPER_ADMIN && (await isLastSuperAdmin(id))) {
+      return reply.code(400).send({ error: 'Cannot demote the last super admin' });
     }
 
     const user = await prisma.user.update({
@@ -85,15 +81,13 @@ export async function userRoutes(app: FastifyInstance) {
 
   // Delete user — SUPER_ADMIN only. Same anti-lockout rule.
   app.delete('/:id', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const { id } = idParam.parse(req.params);
     if (id === req.user.sub) return reply.code(400).send({ error: 'Cannot delete yourself' });
 
     const target = await prisma.user.findUnique({ where: { id } });
     if (!target) return reply.code(404).send({ error: 'Not found' });
-    if (target.role === Role.SUPER_ADMIN) {
-      const others = await prisma.user.count({ where: { role: Role.SUPER_ADMIN, NOT: { id } } });
-      if (others === 0)
-        return reply.code(400).send({ error: 'Cannot delete the last super admin' });
+    if (target.role === Role.SUPER_ADMIN && (await isLastSuperAdmin(id))) {
+      return reply.code(400).send({ error: 'Cannot delete the last super admin' });
     }
 
     // Posts created by this user remain (FK is required). Re-assign to caller.
@@ -141,7 +135,7 @@ export async function userRoutes(app: FastifyInstance) {
   });
 
   app.delete('/me/api-keys/:id', async (req, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const { id } = idParam.parse(req.params);
     const key = await prisma.apiKey.findUnique({ where: { id } });
     if (!key || key.ownerId !== req.user.sub) return reply.code(404).send({ error: 'Not found' });
     await prisma.apiKey.update({ where: { id }, data: { revokedAt: new Date() } });

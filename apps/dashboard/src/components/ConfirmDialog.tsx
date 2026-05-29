@@ -94,7 +94,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!state) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') close(state?.kind === 'notify' ? true : false);
+      if (e.key === 'Escape') close(state?.kind === 'notify');
       if (e.key === 'Enter') close(true);
     }
     window.addEventListener('keydown', onKey);

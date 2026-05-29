@@ -1,12 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { prisma, Role } from '../db.js';
-
-const emailField = z
-  .string()
-  .email()
-  .transform((s) => s.trim().toLowerCase());
+import { prisma, Role, type User } from '../db.js';
+import { emailField } from '../lib/schemas.js';
 
 const loginSchema = z.object({
   email: emailField,
@@ -25,6 +21,11 @@ const bootstrapSchema = z.object({
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password-' + Math.random(), 10);
 
 export async function authRoutes(app: FastifyInstance) {
+  const issueSession = (user: User) => ({
+    token: app.jwt.sign({ sub: user.id, email: user.email, role: user.role }, { expiresIn: '7d' }),
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+  });
+
   app.get('/bootstrap-status', async () => {
     const count = await prisma.user.count();
     return { needsBootstrap: count === 0 };
@@ -38,14 +39,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (!user || !ok) {
       return reply.code(401).send({ error: 'Invalid credentials' });
     }
-    const token = app.jwt.sign(
-      { sub: user.id, email: user.email, role: user.role },
-      { expiresIn: '7d' },
-    );
-    return {
-      token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
-    };
+    return issueSession(user);
   });
 
   app.post('/bootstrap', async (req, reply) => {
@@ -65,14 +59,7 @@ export async function authRoutes(app: FastifyInstance) {
         role: Role.SUPER_ADMIN,
       },
     });
-    const token = app.jwt.sign(
-      { sub: user.id, email: user.email, role: user.role },
-      { expiresIn: '7d' },
-    );
-    return reply.code(201).send({
-      token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
-    });
+    return reply.code(201).send(issueSession(user));
   });
 
   app.get('/me', { preHandler: [app.authenticate] }, async (req) => {

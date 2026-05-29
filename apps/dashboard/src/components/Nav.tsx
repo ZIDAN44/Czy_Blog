@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Logo from '@/components/Logo';
 import { clearSession, currentUser, type SessionUser } from '@/lib/api';
+import { initials } from '@/lib/utils';
 
 export default function Nav() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -29,15 +30,6 @@ export default function Nav() {
     ...(canManageUsers ? [{ href: '/dashboard/users', label: 'Users' }] : []),
     { href: '/dashboard/api-keys', label: 'API keys' },
   ];
-
-  const initials = user?.name
-    ? user.name
-        .split(' ')
-        .map((s) => s[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
-    : '?';
 
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-white/70 border-b border-slate-200/60">
@@ -82,7 +74,7 @@ export default function Nav() {
               className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full hover:bg-slate-100 transition-colors"
             >
               <span className="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-white text-xs font-semibold">
-                {initials}
+                {initials(user?.name)}
               </span>
               <span className="hidden sm:block text-xs text-slate-600 max-w-[10ch] truncate">
                 {user?.name}

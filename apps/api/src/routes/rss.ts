@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { prisma, PostStatus } from '../db.js';
+import { prisma } from '../db.js';
 import { config } from '../config.js';
+import { publishedPostWhere } from '../lib/queries.js';
 
 function esc(s: string): string {
   return s.replace(
@@ -12,7 +13,7 @@ function esc(s: string): string {
 export async function rssRoutes(app: FastifyInstance) {
   app.get('/rss.xml', async (_req, reply) => {
     const posts = await prisma.post.findMany({
-      where: { status: PostStatus.PUBLISHED, deletedAt: null, publishedAt: { lte: new Date() } },
+      where: publishedPostWhere(),
       orderBy: { publishedAt: 'desc' },
       take: 25,
       include: { author: true },

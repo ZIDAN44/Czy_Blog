@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, currentUser, type Role } from '@/lib/api';
 import { useConfirm, useNotify } from '@/components/ConfirmDialog';
+import { errMsg, initials } from '@/lib/utils';
 
 interface UserRow {
   id: string;
@@ -50,7 +51,6 @@ export default function UsersPage() {
   }, [me, router]);
 
   const isSuper = me?.role === 'SUPER_ADMIN';
-  const errMsg = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
 
   async function load() {
     try {
@@ -128,15 +128,6 @@ export default function UsersPage() {
         tone: 'danger',
       });
     }
-  }
-
-  function initials(name: string) {
-    return name
-      .split(' ')
-      .map((s) => s[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
   }
 
   return (

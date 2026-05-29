@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, currentUser, type PostStatus } from '@/lib/api';
+import { STATUS_PILL } from '@/lib/utils';
 
 interface PostSummary {
   id: string;
@@ -12,23 +13,25 @@ interface PostSummary {
   updated_at: string;
 }
 
-const STATUS_META: Record<PostStatus, { label: string; cls: string; ring: string }> = {
-  DRAFT: { label: 'Drafts', cls: 'pill-draft', ring: 'from-slate-200 to-slate-100' },
-  PENDING_REVIEW: { label: 'In review', cls: 'pill-pending', ring: 'from-amber-200 to-amber-100' },
-  SCHEDULED: { label: 'Scheduled', cls: 'pill-scheduled', ring: 'from-sky-200 to-sky-100' },
-  PUBLISHED: { label: 'Published', cls: 'pill-published', ring: 'from-emerald-200 to-emerald-100' },
-  ARCHIVED: { label: 'Archived', cls: 'pill-archived', ring: 'from-rose-200 to-rose-100' },
+const STATUS_META: Record<PostStatus, { label: string; ring: string }> = {
+  DRAFT: { label: 'Drafts', ring: 'from-slate-200 to-slate-100' },
+  PENDING_REVIEW: { label: 'In review', ring: 'from-amber-200 to-amber-100' },
+  SCHEDULED: { label: 'Scheduled', ring: 'from-sky-200 to-sky-100' },
+  PUBLISHED: { label: 'Published', ring: 'from-emerald-200 to-emerald-100' },
+  ARCHIVED: { label: 'Archived', ring: 'from-rose-200 to-rose-100' },
 };
+
+const emptyCounts = (): Record<PostStatus, number> => ({
+  DRAFT: 0,
+  PENDING_REVIEW: 0,
+  SCHEDULED: 0,
+  PUBLISHED: 0,
+  ARCHIVED: 0,
+});
 
 export default function Overview() {
   const me = currentUser();
-  const [counts, setCounts] = useState<Record<PostStatus, number>>({
-    DRAFT: 0,
-    PENDING_REVIEW: 0,
-    SCHEDULED: 0,
-    PUBLISHED: 0,
-    ARCHIVED: 0,
-  });
+  const [counts, setCounts] = useState<Record<PostStatus, number>>(emptyCounts);
   const [allPosts, setAllPosts] = useState<PostSummary[]>([]);
   const [filter, setFilter] = useState<PostStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,13 +39,7 @@ export default function Overview() {
   useEffect(() => {
     (async () => {
       const { data } = await api<{ data: PostSummary[] }>('/api/v1/admin/posts?limit=100');
-      const tally = {
-        DRAFT: 0,
-        PENDING_REVIEW: 0,
-        SCHEDULED: 0,
-        PUBLISHED: 0,
-        ARCHIVED: 0,
-      } as Record<PostStatus, number>;
+      const tally = emptyCounts();
       for (const p of data) tally[p.status]++;
       setCounts(tally);
       setAllPosts(data);
@@ -146,9 +143,7 @@ export default function Overview() {
                 <div className="font-medium truncate">{p.title || '(untitled)'}</div>
                 <div className="text-xs text-slate-500 mt-0.5 font-mono">/{p.slug}</div>
               </div>
-              <span className={`pill ${STATUS_META[p.status].cls}`}>
-                {p.status.replace('_', ' ')}
-              </span>
+              <span className={`pill ${STATUS_PILL[p.status]}`}>{p.status.replace('_', ' ')}</span>
               <span className="text-xs text-slate-400 hidden sm:inline">
                 {new Date(p.updated_at).toLocaleDateString()}
               </span>

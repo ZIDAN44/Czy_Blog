@@ -39,15 +39,23 @@ export async function buildApp() {
   await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 
   fs.mkdirSync(config.uploadDir, { recursive: true });
-  await app.register(staticPlugin, {
-    root: path.resolve(config.uploadDir),
-    prefix: '/uploads/',
-    decorateReply: false,
-  });
+  await app.register(
+    async (instance) => {
+      await instance.register(staticPlugin, {
+        root: path.resolve(config.uploadDir),
+        prefix: '/uploads/',
+        decorateReply: false,
+      });
+    },
+    { logLevel: 'warn' },
+  );
 
   await app.register(authPlugin);
 
-  app.get('/health', async () => ({ ok: true, time: new Date().toISOString() }));
+  app.get('/health', { logLevel: 'warn' }, async () => ({
+    ok: true,
+    time: new Date().toISOString(),
+  }));
 
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
   await app.register(userRoutes, { prefix: '/api/v1/users' });
@@ -57,15 +65,16 @@ export async function buildApp() {
   await app.register(mediaRoutes, { prefix: '/api/v1/media' });
   await app.register(publicTaxonomyRoutes, { prefix: '/api/v1' });
   await app.register(adminTaxonomyRoutes, { prefix: '/api/v1/admin' });
-  await app.register(rssRoutes, { prefix: '/' });
+  await app.register(rssRoutes, { prefix: '/', logLevel: 'warn' });
 
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof ZodError) {
       return reply.code(400).send({ error: 'ValidationError', issues: z.flattenError(err) });
     }
-    app.log.error(err);
     const e = err as { statusCode?: number; message?: string };
-    reply.code(e.statusCode ?? 500).send({ error: e.message || 'Internal Server Error' });
+    const status = e.statusCode ?? 500;
+    if (status >= 500) app.log.error(err);
+    reply.code(status).send({ error: e.message || 'Internal Server Error' });
   });
 
   return app;

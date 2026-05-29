@@ -1,7 +1,7 @@
 import 'dotenv/config';
 
-function required(name: string, fallback?: string): string {
-  const v = process.env[name] ?? fallback;
+function required(name: string): string {
+  const v = process.env[name];
   if (!v) throw new Error(`Missing env: ${name}`);
   return v;
 }
@@ -9,13 +9,13 @@ function required(name: string, fallback?: string): string {
 const DEV_JWT_SECRET = 'dev-jwt-secret-change-me';
 const isProd = process.env.NODE_ENV === 'production';
 const jwtSecret = process.env.JWT_SECRET ?? (isProd ? '' : DEV_JWT_SECRET);
-if (!jwtSecret || jwtSecret === DEV_JWT_SECRET) {
-  if (isProd) {
+if (isProd) {
+  if (!jwtSecret || jwtSecret === DEV_JWT_SECRET) {
     throw new Error('JWT_SECRET must be set to a strong, unique value in production');
   }
-}
-if (jwtSecret.length < 32 && isProd) {
-  throw new Error('JWT_SECRET must be at least 32 characters in production');
+  if (jwtSecret.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters in production');
+  }
 }
 
 export const config = {

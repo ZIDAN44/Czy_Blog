@@ -1,16 +1,11 @@
 // Czy Blog database schema
 // Postgres + JSONB for block-editor content
 
-// Prisma 7: explicit `output` is required — the generator no longer writes
-// into node_modules. We point it inside src/ so the relative imports stay
-// short and the TS compiler picks the types up automatically.
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
-// Prisma 7: connection URL has moved to prisma.config.ts.
-// Driver adapter (@prisma/adapter-pg) is required at runtime — see src/db.ts.
 datasource db {
   provider = "postgresql"
 }
@@ -51,7 +46,6 @@ model Post {
   slug          String     @unique
   title         String
   excerpt       String?
-  // Block-editor JSON (TipTap doc). NOT raw HTML.
   content       Json
   coverImageUrl String?
   status        PostStatus @default(DRAFT)
@@ -117,7 +111,7 @@ model ApiKey {
   id         String    @id @default(cuid())
   name       String
   keyHash    String    @unique
-  prefix     String    // first 8 chars, for display
+  prefix     String
   ownerId    String
   owner      User      @relation(fields: [ownerId], references: [id])
   lastUsedAt DateTime?

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, type PostStatus } from '@/lib/api';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { STATUS_PILL } from '@/lib/utils';
 
 interface Row {
   id: string;
@@ -21,14 +22,6 @@ const STATUSES: (PostStatus | 'ALL')[] = [
   'PUBLISHED',
   'ARCHIVED',
 ];
-
-const PILL: Record<PostStatus, string> = {
-  DRAFT: 'pill-draft',
-  PENDING_REVIEW: 'pill-pending',
-  SCHEDULED: 'pill-scheduled',
-  PUBLISHED: 'pill-published',
-  ARCHIVED: 'pill-archived',
-};
 
 export default function PostsPage() {
   const confirm = useConfirm();
@@ -61,13 +54,13 @@ export default function PostsPage() {
     load();
   }
 
-  const filtered = query
-    ? posts.filter(
-        (p) =>
-          p.title.toLowerCase().includes(query.toLowerCase()) ||
-          p.slug.toLowerCase().includes(query.toLowerCase()),
-      )
-    : posts;
+  const filtered = (() => {
+    if (!query) return posts;
+    const q = query.toLowerCase();
+    return posts.filter(
+      (p) => p.title.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q),
+    );
+  })();
 
   return (
     <div className="space-y-6">
@@ -146,7 +139,7 @@ export default function PostsPage() {
                 <span>updated {new Date(p.updated_at).toLocaleString()}</span>
               </div>
             </div>
-            <span className={`pill ${PILL[p.status]}`}>{p.status.replace('_', ' ')}</span>
+            <span className={`pill ${STATUS_PILL[p.status]}`}>{p.status.replace('_', ' ')}</span>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               {p.status === 'PUBLISHED' && (
                 <Link href={`/read/${p.slug}`} className="btn btn-ghost text-xs" target="_blank">

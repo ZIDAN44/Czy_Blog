@@ -28,10 +28,6 @@ export function canEditPost(userRole: Role, userId: string, postAuthorId: string
   return false;
 }
 
-export function canPublish(userRole: Role): boolean {
-  return atLeast(userRole, Role.AUTHOR);
-}
-
 // Status transitions a contributor is permitted to perform on their own post.
 // Anything that results in publication (direct or scheduled) is forbidden —
 // they must submit for review and let an EDITOR/SUPER_ADMIN publish.

@@ -1,7 +1,9 @@
+import type { FastifyBaseLogger } from 'fastify';
 import { prisma, PostStatus } from './db.js';
 
 // Publishes posts whose scheduledFor time has arrived. Runs every minute.
-export function startScheduler(intervalMs = 60_000) {
+export function startScheduler(logger: FastifyBaseLogger, intervalMs = 60_000) {
+  const log = logger.child({ component: 'scheduler' });
   const tick = async () => {
     try {
       const now = new Date();
@@ -20,7 +22,7 @@ export function startScheduler(intervalMs = 60_000) {
         });
       }
     } catch (err) {
-      console.error('[scheduler]', err);
+      log.error(err);
     }
   };
   const handle = setInterval(tick, intervalMs);

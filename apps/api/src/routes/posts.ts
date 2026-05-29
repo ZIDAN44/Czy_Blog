@@ -4,6 +4,8 @@ import { prisma, PostStatus, Role, Prisma } from '../db.js';
 import { toSlug, uniquePostSlug } from '../lib/slug.js';
 import { canEditPost, canManageTaxonomy, coerceStatus } from '../lib/rbac.js';
 import { serializePost } from '../lib/serialize.js';
+import { paginated, paginationSchema, publishedPostWhere } from '../lib/queries.js';
+import { idParam, slugParam } from '../lib/schemas.js';
 
 const postInclude = {
   author: { select: { id: true, name: true, avatarUrl: true, bio: true } },
@@ -24,9 +26,11 @@ const createSchema = z.object({
   scheduledFor: z.iso.datetime().optional(),
 });
 
-const updateSchema = createSchema
-  .partial()
-  .extend({ title: z.string().min(1).max(200).optional() });
+const updateSchema = createSchema.partial();
+
+function isFutureDate(d: Date | null | undefined): d is Date {
+  return !!d && d.getTime() > Date.now();
+}
 
 // Resolve a category by slug. Only EDITOR+ may implicitly create one — for
 // lower roles we require the slug to already exist so they cannot mint new
@@ -64,21 +68,15 @@ async function resolveTagIds(slugs: string[], role: Role): Promise<string[]> {
 // Public read endpoints
 export async function publicPostRoutes(app: FastifyInstance) {
   app.get('/', async (req, reply) => {
-    const q = z
-      .object({
-        page: z.coerce.number().int().min(1).default(1),
-        limit: z.coerce.number().int().min(1).max(50).default(10),
+    const q = paginationSchema({ maxLimit: 50, defaultLimit: 10 })
+      .extend({
         tag: z.string().optional(),
         category: z.string().optional(),
         q: z.string().optional(),
       })
       .parse(req.query);
 
-    const where: Prisma.PostWhereInput = {
-      status: PostStatus.PUBLISHED,
-      deletedAt: null,
-      publishedAt: { lte: new Date() },
-    };
+    const where: Prisma.PostWhereInput = publishedPostWhere();
     if (q.tag) where.tags = { some: { tag: { slug: q.tag } } };
     if (q.category) where.category = { slug: q.category };
     if (q.q)
@@ -100,24 +98,14 @@ export async function publicPostRoutes(app: FastifyInstance) {
 
     return reply.send({
       data: posts.map(serializePost),
-      pagination: {
-        page: q.page,
-        limit: q.limit,
-        total,
-        pages: Math.ceil(total / q.limit),
-      },
+      pagination: paginated(total, q.page, q.limit),
     });
   });
 
   app.get('/:slug', async (req, reply) => {
-    const { slug } = z.object({ slug: z.string() }).parse(req.params);
+    const { slug } = slugParam.parse(req.params);
     const post = await prisma.post.findFirst({
-      where: {
-        slug,
-        status: PostStatus.PUBLISHED,
-        deletedAt: null,
-        publishedAt: { lte: new Date() },
-      },
+      where: { ...publishedPostWhere(), slug },
       include: postInclude,
     });
     if (!post) return reply.code(404).send({ error: 'Not found' });
@@ -134,10 +122,8 @@ export async function adminPostRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
 
   app.get('/', async (req) => {
-    const q = z
-      .object({
-        page: z.coerce.number().int().min(1).default(1),
-        limit: z.coerce.number().int().min(1).max(100).default(20),
+    const q = paginationSchema({ maxLimit: 100, defaultLimit: 20 })
+      .extend({
         status: z.enum(PostStatus).optional(),
         mine: z.coerce.boolean().optional(),
       })
@@ -162,12 +148,12 @@ export async function adminPostRoutes(app: FastifyInstance) {
     ]);
     return {
       data: posts.map(serializePost),
-      pagination: { page: q.page, limit: q.limit, total, pages: Math.ceil(total / q.limit) },
+      pagination: paginated(total, q.page, q.limit),
     };
   });
 
   app.get('/:id', async (req, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const { id } = idParam.parse(req.params);
     const post = await prisma.post.findUnique({ where: { id }, include: postInclude });
     if (!post || post.deletedAt) return reply.code(404).send({ error: 'Not found' });
     if (!canEditPost(req.user.role, req.user.sub, post.authorId)) {
@@ -187,11 +173,11 @@ export async function adminPostRoutes(app: FastifyInstance) {
 
     // SCHEDULED requires a future scheduledFor — otherwise it's an
     // instant-publish back door for AUTHOR (the scheduler picks it up on next tick).
-    if (finalStatus === PostStatus.SCHEDULED) {
-      const when = body.scheduledFor ? new Date(body.scheduledFor) : null;
-      if (!when || when.getTime() <= Date.now()) {
-        return reply.code(400).send({ error: 'scheduledFor must be in the future' });
-      }
+    if (
+      finalStatus === PostStatus.SCHEDULED &&
+      !isFutureDate(body.scheduledFor ? new Date(body.scheduledFor) : null)
+    ) {
+      return reply.code(400).send({ error: 'scheduledFor must be in the future' });
     }
 
     const slug = await uniquePostSlug(body.title);
@@ -223,7 +209,7 @@ export async function adminPostRoutes(app: FastifyInstance) {
   });
 
   app.patch('/:id', async (req, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const { id } = idParam.parse(req.params);
     const body = updateSchema.parse(req.body);
     const post = await prisma.post.findUnique({ where: { id } });
     if (!post || post.deletedAt) return reply.code(404).send({ error: 'Not found' });
@@ -249,13 +235,9 @@ export async function adminPostRoutes(app: FastifyInstance) {
       }
       data.status = target;
       if (target === PostStatus.SCHEDULED) {
-        const when =
-          body.scheduledFor !== undefined
-            ? body.scheduledFor
-              ? new Date(body.scheduledFor)
-              : null
-            : post.scheduledFor;
-        if (!when || when.getTime() <= Date.now()) {
+        // If the request omitted scheduledFor, fall back to the post's existing value.
+        const raw = body.scheduledFor === undefined ? post.scheduledFor : body.scheduledFor;
+        if (!isFutureDate(raw ? new Date(raw) : null)) {
           return reply.code(400).send({ error: 'scheduledFor must be in the future' });
         }
       }
@@ -279,7 +261,7 @@ export async function adminPostRoutes(app: FastifyInstance) {
   });
 
   app.delete('/:id', async (req, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(req.params);
+    const { id } = idParam.parse(req.params);
     const post = await prisma.post.findUnique({ where: { id } });
     if (!post || post.deletedAt) return reply.code(404).send({ error: 'Not found' });
     if (!canEditPost(req.user.role, req.user.sub, post.authorId)) {

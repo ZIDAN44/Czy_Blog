@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
 import { api, setSession, type SessionUser } from '@/lib/api';
+import { errMsg } from '@/lib/utils';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function SignupPage() {
         if (!r.needsBootstrap) router.replace('/login');
         else setAllowed(true);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Could not reach API');
+        setError(errMsg(e, 'Could not reach API'));
       }
     })();
   }, [router]);
@@ -43,7 +44,7 @@ export default function SignupPage() {
       setSession(token, user);
       router.replace('/dashboard');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Sign-up failed');
+      setError(errMsg(e, 'Sign-up failed'));
     } finally {
       setBusy(false);
     }

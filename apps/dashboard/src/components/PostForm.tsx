@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BlockEditor from './Editor';
 import { api, currentUser, type PostStatus } from '@/lib/api';
+import { errMsg } from '@/lib/utils';
 import { useConfirm, type ConfirmOptions } from './ConfirmDialog';
 
 type DocNode = { type: string; [key: string]: unknown };
@@ -35,6 +36,14 @@ interface PostData {
 interface Props {
   postId?: string;
   initial?: Partial<PostData>;
+}
+
+function parseTagSlugs(raw: string): string[] | undefined {
+  if (!raw) return undefined;
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 const CONFIRM_FOR_STATUS: Record<PostStatus, ConfirmOptions> = {
@@ -111,12 +120,7 @@ export default function PostForm({ postId, initial }: Props) {
         content: form.content,
         coverImageUrl: form.coverImageUrl || undefined,
         categorySlug: form.categorySlug || undefined,
-        tagSlugs: form.tagSlugs
-          ? form.tagSlugs
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : undefined,
+        tagSlugs: parseTagSlugs(form.tagSlugs),
         status,
         scheduledFor:
           status === 'SCHEDULED' && form.scheduledFor
@@ -138,7 +142,7 @@ export default function PostForm({ postId, initial }: Props) {
       }
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      setError(errMsg(e, 'Unknown error'));
     } finally {
       setBusy(false);
     }
