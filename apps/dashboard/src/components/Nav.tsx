@@ -86,6 +86,12 @@ export default function Nav() {
                   <div className="text-sm font-medium truncate">{user?.name}</div>
                   <div className="text-xs text-slate-500 font-mono">{user?.role}</div>
                 </div>
+                <Link
+                  href="/dashboard/settings"
+                  className="block text-sm px-3 py-2 rounded-md hover:bg-slate-50 text-slate-700"
+                >
+                  Settings
+                </Link>
                 <button
                   onClick={signOut}
                   className="w-full text-left text-sm px-3 py-2 rounded-md hover:bg-slate-50 text-slate-700"
