@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BlockEditor from './Editor';
 import { api, currentUser, type PostStatus } from '@/lib/api';
 import { errMsg } from '@/lib/utils';
+import { useDraftAutosave } from '@/lib/useDraftAutosave';
 import { useConfirm, type ConfirmOptions } from './ConfirmDialog';
 
 type DocNode = { type: string; [key: string]: unknown };
@@ -96,11 +97,30 @@ export default function PostForm({ postId, initial }: Props) {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const role = currentUser()?.role;
+  const [editorKey, setEditorKey] = useState(0);
+  const user = currentUser();
+  const role = user?.role;
   const canPublish = role && role !== 'CONTRIBUTOR';
+
+  // Snapshot of the last server-saved state; while the form matches it there is
+  // nothing unsaved, so the autosave hook stores and offers nothing.
+  const savedSnapshot = useRef(JSON.stringify(form));
+  const draftKey = `czy:draft:${user?.id ?? 'anon'}:${postId ?? 'new'}`;
+  const { recovered, dismissRecovered, clear } = useDraftAutosave(
+    draftKey,
+    form,
+    savedSnapshot.current,
+  );
 
   function set<K extends keyof PostData>(key: K, value: PostData[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function restoreDraft() {
+    if (!recovered) return;
+    setForm(recovered.data);
+    setEditorKey((k) => k + 1);
+    dismissRecovered();
   }
 
   async function save(status: PostStatus) {
@@ -137,9 +157,12 @@ export default function PostForm({ postId, initial }: Props) {
           method: 'POST',
           body: JSON.stringify(payload),
         });
+        clear();
         router.replace(`/dashboard/posts/${data.id}/edit`);
         return;
       }
+      savedSnapshot.current = JSON.stringify(form);
+      clear();
       router.refresh();
     } catch (e) {
       setError(errMsg(e, 'Unknown error'));
@@ -160,6 +183,22 @@ export default function PostForm({ postId, initial }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-4">
+        {recovered && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <span className="flex-1">
+              Recovered unsaved changes from {new Date(recovered.savedAt).toLocaleString()}.
+            </span>
+            <button onClick={restoreDraft} className="btn btn-secondary py-1 px-3 text-xs">
+              Restore
+            </button>
+            <button
+              onClick={clear}
+              className="text-xs font-medium text-amber-700 hover:text-amber-900"
+            >
+              Discard
+            </button>
+          </div>
+        )}
         <div className="card p-6 space-y-4">
           <input
             className="w-full text-3xl font-semibold tracking-tight bg-transparent outline-none placeholder:text-slate-300"
@@ -176,7 +215,11 @@ export default function PostForm({ postId, initial }: Props) {
           />
         </div>
         <div className="card p-6">
-          <BlockEditor initialContent={form.content} onChange={(c) => set('content', c)} />
+          <BlockEditor
+            key={editorKey}
+            initialContent={form.content}
+            onChange={(c) => set('content', c)}
+          />
           <div className="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-100">
             {wordCount.toLocaleString()} words
           </div>
