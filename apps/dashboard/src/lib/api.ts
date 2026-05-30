@@ -1,4 +1,6 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+export const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+
+const BROWSER_API_BASE = '/api-proxy';
 
 export type Role = 'SUPER_ADMIN' | 'EDITOR' | 'AUTHOR' | 'CONTRIBUTOR';
 export type PostStatus = 'DRAFT' | 'PENDING_REVIEW' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
@@ -44,7 +46,7 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   if (opts.body && !(opts.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  const res = await fetch(`${API_URL}${path}`, { ...opts, headers });
+  const res = await fetch(`${BROWSER_API_BASE}${path}`, { ...opts, headers });
   if (!res.ok) {
     let detail: { error?: string } | undefined;
     try {

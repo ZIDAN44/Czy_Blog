@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build output
+.next
+**/.next
+dist
+**/dist
+build
+**/build
+*.tsbuildinfo
+next-env.d.ts
+
+# Generated Prisma client
+apps/api/src/generated
+
+# Local secrets
+.env
+**/.env
+.env.local
+**/.env.*.local
+
+# Uploaded media
+apps/api/uploads
+
+# Logs, caches, coverage
+*.log
+coverage
+.nyc_output
+.turbo
+.cache
+.eslintcache
+
+# VCS/editors/OS-junk
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Docker files
+**/Dockerfile
+.dockerignore
+docker-compose*.yml

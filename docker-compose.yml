@@ -1,16 +1,54 @@
+# Docker Compose Configuration for Czy Blog
+# Requires .env file with environment variables
+
 services:
   postgres:
     image: postgres:18-alpine
     container_name: czyblog-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: czyblog
-      POSTGRES_PASSWORD: czyblog
-      POSTGRES_DB: czyblog
+      POSTGRES_USER: ${POSTGRES_USER:-czyblog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-czyblog}
+      POSTGRES_DB: ${POSTGRES_DB:-czyblog}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - czyblog_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-czyblog} -d ${POSTGRES_DB:-czyblog}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: czyblog-api
+    container_name: czyblog-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    ports:
+      - "${API_PORT:-4000}:4000"
+    volumes:
+      - czyblog_uploads:/app/apps/api/uploads
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+    image: czyblog-dashboard
+    container_name: czyblog-dashboard
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file: .env
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
 
 volumes:
   czyblog_pgdata:
+  czyblog_uploads:
