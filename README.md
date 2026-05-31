@@ -10,10 +10,10 @@ Two apps in one npm workspace:
 ## Quick start
 
 ```bash
-npm install
-npm run db:up
-npm run db:migrate
-npm run dev
+mkdir czy-blog && cd czy-blog
+curl -sSL -o docker-compose.yml https://raw.githubusercontent.com/ZIDAN44/Czy_Blog/main/docker-compose.yml
+curl -sSL -o .env https://raw.githubusercontent.com/ZIDAN44/Czy_Blog/main/.env.docker.example
+docker compose up -d
 ```
 
 Dashboard: `http://localhost:3000` API: `http://localhost:4000`

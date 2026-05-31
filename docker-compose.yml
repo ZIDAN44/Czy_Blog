@@ -21,10 +21,7 @@ services:
       retries: 10
 
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    image: czyblog-api
+    image: ghcr.io/zidan44/czyblog-api:latest
     container_name: czyblog-api
     restart: unless-stopped
     depends_on:
@@ -37,10 +34,7 @@ services:
       - czyblog_uploads:/app/apps/api/uploads
 
   dashboard:
-    build:
-      context: .
-      dockerfile: apps/dashboard/Dockerfile
-    image: czyblog-dashboard
+    image: ghcr.io/zidan44/czyblog-dashboard:latest
     container_name: czyblog-dashboard
     restart: unless-stopped
     depends_on:
