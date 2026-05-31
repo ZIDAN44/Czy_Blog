@@ -1,0 +1,66 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., vX.Y.Z)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release body
+        id: prep
+        run: |
+          TAG="${{ inputs.tag }}"
+          VERSION="${TAG#v}"
+          NS="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          API="${REGISTRY}/${NS}/czyblog-api"
+          DASH="${REGISTRY}/${NS}/czyblog-dashboard"
+
+          # Previous tag for the changelog compare link. Exclude the tag being
+          # released (it may already exist) and fall back to the root commit
+          # for the very first release.
+          PREV="$(git tag --sort=-creatordate | grep -v "^${TAG}$" | head -n 1)"
+          if [ -z "$PREV" ]; then
+            PREV="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+          CHANGELOG="${{ github.server_url }}/${{ github.repository }}/compare/${PREV}...${TAG}"
+
+          {
+            echo "body<<EOF"
+            echo "## Docker Image"
+            echo ""
+            echo '```sh'
+            echo "docker pull ${API}:${VERSION}"
+            echo "docker pull ${API}:latest"
+            echo "docker pull ${DASH}:${VERSION}"
+            echo "docker pull ${DASH}:latest"
+            echo '```'
+            echo ""
+            echo "## Changes"
+            echo ""
+            echo "See [Full Changelog](${CHANGELOG}) for details"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: Release ${{ inputs.tag }}
+          target_commitish: ${{ github.sha }}
+          body: ${{ steps.prep.outputs.body }}
