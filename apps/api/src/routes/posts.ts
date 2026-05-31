@@ -6,6 +6,7 @@ import { canEditPost, canManageTaxonomy, coerceStatus } from '../lib/rbac.js';
 import { serializePost } from '../lib/serialize.js';
 import { paginated, paginationSchema, publishedPostWhere } from '../lib/queries.js';
 import { idParam, slugParam } from '../lib/schemas.js';
+import { purgePostMedia } from '../lib/mediaCleanup.js';
 
 const postInclude = {
   author: { select: { id: true, name: true, avatarUrl: true, bio: true } },
@@ -271,6 +272,8 @@ export async function adminPostRoutes(app: FastifyInstance) {
       where: { id },
       data: { deletedAt: new Date(), status: PostStatus.ARCHIVED },
     });
+    // Reclaim this post's media. Best-effort the sweep catches any leftovers.
+    await purgePostMedia(post, req.log).catch((err) => req.log.error(err));
     return { ok: true };
   });
 }

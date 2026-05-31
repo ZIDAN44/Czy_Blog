@@ -30,4 +30,5 @@ export const config = {
   publicSiteUrl: process.env.PUBLIC_SITE_URL ?? 'http://localhost:3000',
   uploadDir: process.env.UPLOAD_DIR ?? './uploads',
   publicUploadBaseUrl: process.env.PUBLIC_UPLOAD_BASE_URL ?? 'http://localhost:4000/uploads',
+  mediaCleanupIntervalHours: Number(process.env.MEDIA_CLEANUP_INTERVAL_HOURS ?? 24),
 };
