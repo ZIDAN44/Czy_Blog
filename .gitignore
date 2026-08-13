@@ -1,3 +1,13 @@
+# AI Agent directories and files
+.claude/*
+.kiro/*
+.codex/*
+.cursor/*
+.agent/
+agent_data/
+agent_cache/
+agent_logs/
+
 # Dependencies
 node_modules/
 
