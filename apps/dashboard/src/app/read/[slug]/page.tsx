@@ -20,10 +20,15 @@ interface PostDetail {
 }
 
 async function fetchPost(slug: string): Promise<PostDetail | null> {
-  const res = await fetch(`${API_URL}/api/v1/posts/${slug}`, { cache: 'no-store' });
-  if (!res.ok) return null;
-  const { data } = await res.json();
-  return data;
+  try {
+    const res = await fetch(`${API_URL}/api/v1/posts/${slug}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    return data;
+  } catch {
+    // An unreachable API should read as "not here", not as a crashed page.
+    return null;
+  }
 }
 
 export default async function ReadPost({ params }: { params: Promise<{ slug: string }> }) {
@@ -33,23 +38,25 @@ export default async function ReadPost({ params }: { params: Promise<{ slug: str
 
   return (
     <article className="space-y-8">
+      {/* The way out is always in the same place, so nobody gets stuck here. */}
       <Link
         href="/read"
-        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+        className="inline-flex items-center gap-1.5 t-secondary hover:text-content"
       >
         ← All posts
       </Link>
 
       <header className="space-y-5">
-        {post.category && (
-          <span className="text-[10px] uppercase tracking-widest text-indigo-600 font-semibold">
-            {post.category.name}
-          </span>
-        )}
-        <h1 className="text-4xl sm:text-5xl font-semibold leading-[1.1] tracking-tight">
+        {post.category && <span className="t-label text-accent">{post.category.name}</span>}
+        {/* Big text tightens: at this size the default spacing reads as gaps. */}
+        <h1 className="text-[clamp(2.25rem,1.6rem+2.6vw,3.25rem)] font-semibold leading-[1.06] tracking-[-0.028em]">
           {post.title}
         </h1>
-        {post.excerpt && <p className="text-lg text-slate-600 leading-relaxed">{post.excerpt}</p>}
+        {post.excerpt && (
+          <p className="text-lg leading-[1.6] tracking-[-0.004em] text-content-secondary">
+            {post.excerpt}
+          </p>
+        )}
         <div className="flex items-center gap-3 pt-2">
           {post.author.avatar_url ? (
             <img
@@ -58,13 +65,13 @@ export default async function ReadPost({ params }: { params: Promise<{ slug: str
               className="w-10 h-10 rounded-full object-cover"
             />
           ) : (
-            <span className="grid place-items-center w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-semibold">
+            <span className="grid place-items-center w-10 h-10 rounded-full bg-accent text-on-inverse text-xs font-semibold">
               {initials(post.author.name)}
             </span>
           )}
-          <div className="text-sm">
-            <div className="font-medium">{post.author.name}</div>
-            <div className="text-xs text-slate-500">
+          <div>
+            <div className="t-subheading">{post.author.name}</div>
+            <div className="t-caption">
               {post.published_date &&
                 new Date(post.published_date).toLocaleDateString(undefined, {
                   year: 'numeric',
@@ -85,17 +92,18 @@ export default async function ReadPost({ params }: { params: Promise<{ slug: str
         />
       )}
 
-      <div className="ProseMirror prose-zinc max-w-none text-[17px] leading-8">
+      {/* Body copy: leading opens up as size drops, tracking stays near zero. */}
+      <div className="ProseMirror max-w-none text-[1.0625rem] leading-[1.75] tracking-[0.002em]">
         <TiptapRender doc={post.content} />
       </div>
 
       {post.tags.length > 0 && (
-        <footer className="pt-8 border-t border-slate-200/60">
+        <footer className="pt-8 border-t border-line">
           <div className="flex flex-wrap gap-2">
             {post.tags.map((t) => (
               <span
                 key={t.slug}
-                className="text-xs text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors rounded-full px-3 py-1"
+                className="t-caption bg-surface-sunken hover:bg-fill-active transition-colors rounded-full px-3 py-1"
               >
                 #{t.slug}
               </span>

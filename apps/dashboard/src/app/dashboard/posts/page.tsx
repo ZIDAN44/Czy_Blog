@@ -1,9 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, type PostStatus } from '@/lib/api';
 import { useConfirm } from '@/components/ConfirmDialog';
-import { STATUS_PILL } from '@/lib/utils';
+import { useToast } from '@/components/Toast';
+import SegmentedControl, { type Segment } from '@/components/SegmentedControl';
+import { STATUS_PILL, errMsg } from '@/lib/utils';
 
 interface Row {
   id: string;
@@ -14,32 +16,43 @@ interface Row {
   updated_at: string;
 }
 
-const STATUSES: (PostStatus | 'ALL')[] = [
-  'ALL',
-  'DRAFT',
-  'PENDING_REVIEW',
-  'SCHEDULED',
-  'PUBLISHED',
-  'ARCHIVED',
+type Filter = PostStatus | 'ALL';
+
+const SEGMENTS: Segment<Filter>[] = [
+  { value: 'ALL', label: 'All' },
+  { value: 'DRAFT', label: 'Drafts' },
+  { value: 'PENDING_REVIEW', label: 'In review' },
+  { value: 'SCHEDULED', label: 'Scheduled' },
+  { value: 'PUBLISHED', label: 'Published' },
+  { value: 'ARCHIVED', label: 'Archived' },
 ];
 
 export default function PostsPage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const [posts, setPosts] = useState<Row[]>([]);
-  const [filter, setFilter] = useState<PostStatus | 'ALL'>('ALL');
+  const [filter, setFilter] = useState<Filter>('ALL');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
-    const qs = filter === 'ALL' ? '' : `?status=${filter}`;
-    const { data } = await api<{ data: Row[] }>(`/api/v1/admin/posts${qs}`);
-    setPosts(data);
-    setLoading(false);
-  }
-  useEffect(() => {
-    load().catch(console.error);
+    setError(null);
+    try {
+      const qs = filter === 'ALL' ? '' : `?status=${filter}`;
+      const { data } = await api<{ data: Row[] }>(`/api/v1/admin/posts${qs}`);
+      setPosts(data);
+    } catch (e) {
+      setError(errMsg(e, 'Could not reach the server.'));
+    } finally {
+      setLoading(false);
+    }
   }, [filter]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function remove(id: string) {
     const post = posts.find((p) => p.id === id);
@@ -50,8 +63,13 @@ export default function PostsPage() {
       tone: 'danger',
     });
     if (!ok) return;
-    await api(`/api/v1/admin/posts/${id}`, { method: 'DELETE' });
-    load();
+    try {
+      await api(`/api/v1/admin/posts/${id}`, { method: 'DELETE' });
+      toast({ title: 'Post deleted', message: post?.title || 'Untitled', tone: 'success' });
+      load();
+    } catch (e) {
+      toast({ title: 'Could not delete post', message: errMsg(e, ''), tone: 'error' });
+    }
   }
 
   const filtered = (() => {
@@ -66,10 +84,8 @@ export default function PostsPage() {
     <div className="space-y-6">
       <header className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Posts</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage drafts, scheduled posts, and published work.
-          </p>
+          <h1 className="t-display">Posts</h1>
+          <p className="t-secondary mt-1">Drafts, scheduled posts, and everything published.</p>
         </div>
         <Link href="/dashboard/posts/new" className="btn btn-primary">
           <span aria-hidden>+</span> New post
@@ -77,20 +93,13 @@ export default function PostsPage() {
       </header>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1.5 p-1 rounded-xl bg-slate-100/80 border border-slate-200/60">
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors ${
-                filter === s
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              {s.replace('_', ' ')}
-            </button>
-          ))}
+        <div className="max-w-full overflow-x-auto">
+          <SegmentedControl
+            segments={SEGMENTS}
+            value={filter}
+            onChange={setFilter}
+            label="Filter posts by status"
+          />
         </div>
         <div className="ml-auto relative w-full sm:w-64">
           <svg
@@ -101,7 +110,7 @@ export default function PostsPage() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-tertiary pointer-events-none"
             aria-hidden="true"
           >
             <circle cx="11" cy="11" r="7" />
@@ -110,51 +119,90 @@ export default function PostsPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search posts…"
+            placeholder="Search title or slug…"
+            aria-label="Search posts"
             className="input !pl-10"
           />
         </div>
       </div>
 
-      <div className="card divide-y divide-slate-100 overflow-hidden stagger">
-        {loading && <div className="px-5 py-10 text-sm text-slate-400 text-center">Loading…</div>}
-        {!loading && filtered.length === 0 && (
-          <p className="px-5 py-10 text-sm text-slate-500 text-center">Nothing here yet.</p>
+      <div className="card divide-y divide-line overflow-hidden">
+        {loading &&
+          [0, 1, 2, 3].map((i) => (
+            <div key={i} className="px-5 py-4 flex items-center gap-4">
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-4 w-1/3" />
+                <div className="skeleton h-3 w-2/5" />
+              </div>
+              <div className="skeleton h-5 w-20 rounded-full" />
+            </div>
+          ))}
+
+        {error && !loading && (
+          <div className="px-5 py-14 text-center space-y-3">
+            <p className="t-body text-content">{error}</p>
+            <button onClick={load} className="btn btn-secondary">
+              Try again
+            </button>
+          </div>
         )}
-        {filtered.map((p) => (
-          <div
-            key={p.id}
-            className="group flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors"
-          >
-            <div className="flex-1 min-w-0">
-              <Link
-                href={`/dashboard/posts/${p.id}/edit`}
-                className="font-medium hover:text-indigo-600 transition-colors"
-              >
-                {p.title || '(untitled)'}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div className="px-5 py-14 text-center space-y-3">
+            <p className="t-body text-content-secondary">
+              {query
+                ? `Nothing matches “${query}”.`
+                : filter === 'ALL'
+                  ? 'No posts yet.'
+                  : 'Nothing with this status.'}
+            </p>
+            {query ? (
+              <button onClick={() => setQuery('')} className="btn btn-secondary">
+                Clear search
+              </button>
+            ) : (
+              <Link href="/dashboard/posts/new" className="btn btn-primary">
+                Write a post
               </Link>
-              <div className="text-xs text-slate-500 mt-0.5">
-                <span className="font-mono">/{p.slug}</span>
-                <span className="mx-1.5">·</span>
-                <span>updated {new Date(p.updated_at).toLocaleString()}</span>
+            )}
+          </div>
+        )}
+
+        {!loading &&
+          filtered.map((p) => (
+            <div
+              key={p.id}
+              className="group flex items-center gap-4 px-5 py-3.5 hover:bg-fill-hover transition-colors"
+            >
+              <div className="flex-1 min-w-0">
+                <Link
+                  href={`/dashboard/posts/${p.id}/edit`}
+                  className="t-subheading hover:text-accent"
+                >
+                  {p.title || 'Untitled'}
+                </Link>
+                <div className="t-caption mt-0.5 truncate">
+                  <span className="font-mono">/{p.slug}</span>
+                  <span className="mx-1.5">·</span>
+                  <span>updated {new Date(p.updated_at).toLocaleString()}</span>
+                </div>
+              </div>
+              <span className={`pill ${STATUS_PILL[p.status]}`}>{p.status.replace('_', ' ')}</span>
+              <div className="row-actions flex items-center gap-1">
+                {p.status === 'PUBLISHED' && (
+                  <Link href={`/read/${p.slug}`} className="btn btn-ghost text-xs" target="_blank">
+                    View
+                  </Link>
+                )}
+                <Link href={`/dashboard/posts/${p.id}/edit`} className="btn btn-ghost text-xs">
+                  Edit
+                </Link>
+                <button onClick={() => remove(p.id)} className="btn btn-danger text-xs">
+                  Delete
+                </button>
               </div>
             </div>
-            <span className={`pill ${STATUS_PILL[p.status]}`}>{p.status.replace('_', ' ')}</span>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              {p.status === 'PUBLISHED' && (
-                <Link href={`/read/${p.slug}`} className="btn btn-ghost text-xs" target="_blank">
-                  View
-                </Link>
-              )}
-              <Link href={`/dashboard/posts/${p.id}/edit`} className="btn btn-ghost text-xs">
-                Edit
-              </Link>
-              <button onClick={() => remove(p.id)} className="btn btn-danger text-xs">
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );

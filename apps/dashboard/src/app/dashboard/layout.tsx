@@ -15,7 +15,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col">
       <Nav />
-      <main className="max-w-6xl mx-auto px-6 py-10 w-full animate-fadeIn">{children}</main>
+      {/* Bottom padding leaves room for toasts to sit over content, not on it. */}
+      <main className="max-w-6xl mx-auto px-6 pt-10 pb-24 w-full animate-fadeIn">{children}</main>
     </div>
   );
 }

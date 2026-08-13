@@ -1,16 +1,27 @@
 'use client';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Logo from '@/components/Logo';
+import { Popover, Sheet } from '@/components/Overlay';
+import ThemeToggle from '@/components/ThemeToggle';
 import { clearSession, currentUser, type SessionUser } from '@/lib/api';
+import { SPRING_SNAPPY, prefersReducedMotion } from '@/lib/motion';
+import { useIsCompact, useScrolled, useSpring } from '@/lib/useMotion';
 import { initials } from '@/lib/utils';
+
+interface NavLink {
+  href: string;
+  label: string;
+}
 
 export default function Nav() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const scrolled = useScrolled();
+  const compact = useIsCompact();
 
   useEffect(() => {
     setUser(currentUser());
@@ -23,7 +34,9 @@ export default function Nav() {
 
   const canManageUsers = user && (user.role === 'SUPER_ADMIN' || user.role === 'EDITOR');
 
-  const links: { href: string; label: string }[] = [
+  // Named for what they contain, not for vague umbrellas — a specific label is
+  // what makes a destination predictable before you get there.
+  const links: NavLink[] = [
     { href: '/dashboard', label: 'Overview' },
     { href: '/dashboard/posts', label: 'Posts' },
     { href: '/dashboard/posts/new', label: 'Write' },
@@ -31,33 +44,27 @@ export default function Nav() {
     { href: '/dashboard/api-keys', label: 'API keys' },
   ];
 
+  const isActive = (href: string) =>
+    href === '/dashboard' ? pathname === href : pathname.startsWith(href);
+  const activeHref = links.find((l) => isActive(l.href))?.href ?? null;
+
+  const menu = (
+    <AccountMenu user={user} onNavigate={() => setMenuOpen(false)} onSignOut={signOut} />
+  );
+
   return (
-    <header className="sticky top-0 z-30 backdrop-blur-md bg-white/70 border-b border-slate-200/60">
+    <header
+      className="chrome sticky top-0 z-30"
+      data-scrolled={scrolled}
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center gap-6">
-        <Link href="/dashboard" className="flex items-center gap-2 group">
-          <Logo className="w-7 h-7 text-slate-900 group-hover:scale-105 transition-transform" />
+        <Link href="/dashboard" className="flex items-center gap-2 group pressable">
+          <Logo className="w-7 h-7 text-content" />
           <span className="font-semibold tracking-tight">Czy Blog</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 text-sm">
-          {links.map((l) => {
-            const active =
-              l.href === '/dashboard' ? pathname === l.href : pathname.startsWith(l.href);
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
-                  active
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                {l.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <NavRail links={links} activeHref={activeHref} className="hidden md:flex" />
 
         <div className="ml-auto flex items-center gap-2">
           <Link
@@ -70,58 +77,191 @@ export default function Nav() {
           <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-              className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full hover:bg-slate-100 transition-colors"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full hover:bg-fill-hover"
             >
-              <span className="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-white text-xs font-semibold">
+              <span className="grid place-items-center w-7 h-7 rounded-full bg-inverse text-on-inverse text-xs font-semibold">
                 {initials(user?.name)}
               </span>
-              <span className="hidden sm:block text-xs text-slate-600 max-w-[10ch] truncate">
+              <span className="hidden sm:block t-caption max-w-[10ch] truncate vibrant-secondary">
                 {user?.name}
               </span>
             </button>
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 w-56 card p-1 animate-popIn">
-                <div className="px-3 py-2 border-b border-slate-100">
-                  <div className="text-sm font-medium truncate">{user?.name}</div>
-                  <div className="text-xs text-slate-500 font-mono">{user?.role}</div>
-                </div>
-                <Link
-                  href="/dashboard/settings"
-                  className="block text-sm px-3 py-2 rounded-md hover:bg-slate-50 text-slate-700"
-                >
-                  Settings
-                </Link>
-                <button
-                  onClick={signOut}
-                  className="w-full text-left text-sm px-3 py-2 rounded-md hover:bg-slate-50 text-slate-700"
-                >
-                  Sign out
-                </button>
-              </div>
+            {/* The panel grows out of the avatar it belongs to, so the
+                relationship between button and contents stays obvious. */}
+            {!compact && (
+              <Popover
+                open={menuOpen}
+                onClose={() => setMenuOpen(false)}
+                origin="top right"
+                className="right-0 mt-2 w-60 p-1.5"
+              >
+                {menu}
+              </Popover>
             )}
           </div>
         </div>
       </div>
 
-      {/* mobile nav */}
-      <nav className="md:hidden flex items-center gap-1 px-4 pb-2 overflow-x-auto text-xs">
-        {links.map((l) => {
-          const active =
-            l.href === '/dashboard' ? pathname === l.href : pathname.startsWith(l.href);
-          return (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`px-2.5 py-1 rounded-md whitespace-nowrap ${
-                active ? 'bg-slate-900 text-white' : 'text-slate-600'
-              }`}
-            >
-              {l.label}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* On a phone the same menu arrives as a sheet you can throw away. */}
+      {compact && (
+        <Sheet open={menuOpen} onClose={() => setMenuOpen(false)}>
+          {menu}
+        </Sheet>
+      )}
+
+      <NavRail
+        links={links}
+        activeHref={activeHref}
+        className="md:hidden overflow-x-auto px-4 pb-2"
+      />
     </header>
+  );
+}
+
+function AccountMenu({
+  user,
+  onNavigate,
+  onSignOut,
+}: {
+  user: SessionUser | null;
+  onNavigate: () => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <div role="menu">
+      <div className="px-3 py-2 border-b border-line mb-1">
+        <div className="t-subheading truncate">{user?.name}</div>
+        <div className="t-caption font-mono">{user?.role?.replace('_', ' ').toLowerCase()}</div>
+      </div>
+      <div className="px-3 pb-2">
+        <div className="t-label mb-1.5">Appearance</div>
+        <ThemeToggle />
+      </div>
+      <Link
+        href="/dashboard/settings"
+        role="menuitem"
+        onClick={onNavigate}
+        className="block t-body px-3 py-2 rounded-lg hover:bg-fill-hover text-content"
+      >
+        Account settings
+      </Link>
+      <Link
+        href="/read"
+        role="menuitem"
+        target="_blank"
+        onClick={onNavigate}
+        className="block t-body px-3 py-2 rounded-lg hover:bg-fill-hover text-content sm:hidden"
+      >
+        View site ↗
+      </Link>
+      <button
+        role="menuitem"
+        onClick={onSignOut}
+        className="w-full text-left t-body px-3 py-2 rounded-lg hover:bg-fill-hover text-content"
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
+/**
+ * The active marker is one object that travels between destinations rather
+ * than a highlight that teleports. Position and width are separate springs so
+ * a short label following a long one does not desynchronise.
+ */
+function NavRail({
+  links,
+  activeHref,
+  className = '',
+}: {
+  links: NavLink[];
+  activeHref: string | null;
+  className?: string;
+}) {
+  const trackRef = useRef<HTMLElement | null>(null);
+  const items = useRef(new Map<string, HTMLAnchorElement>());
+  const markerRef = useRef<HTMLSpanElement | null>(null);
+  const x = useSpring(0);
+  const width = useSpring(0);
+  const hasSettled = useRef(false);
+
+  const paint = useCallback(() => {
+    const el = markerRef.current;
+    if (!el) return;
+    el.style.transform = `translate3d(${x.current}px, 0, 0)`;
+    el.style.width = `${width.current}px`;
+  }, [x, width]);
+
+  useEffect(() => {
+    const off = [x.subscribe(paint), width.subscribe(paint)];
+    return () => off.forEach((fn) => fn());
+  }, [x, width, paint]);
+
+  const measure = useCallback(
+    (animate: boolean) => {
+      const marker = markerRef.current;
+      const el = activeHref ? items.current.get(activeHref) : null;
+      if (!marker) return;
+      if (!el) {
+        marker.style.opacity = '0';
+        return;
+      }
+      marker.style.opacity = '1';
+      if (!animate || prefersReducedMotion()) {
+        x.set(el.offsetLeft);
+        width.set(el.offsetWidth);
+        paint();
+        return;
+      }
+      x.to(el.offsetLeft, SPRING_SNAPPY);
+      width.to(el.offsetWidth, SPRING_SNAPPY);
+    },
+    [activeHref, x, width, paint],
+  );
+
+  useLayoutEffect(() => {
+    measure(hasSettled.current);
+    hasSettled.current = true;
+  }, [measure]);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => measure(false));
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [measure]);
+
+  return (
+    <nav ref={trackRef} className={`relative items-center gap-1 flex text-sm ${className}`}>
+      <span
+        ref={markerRef}
+        aria-hidden
+        className="absolute inset-y-0 left-0 rounded-lg bg-inverse will-move"
+        style={{ opacity: 0 }}
+      />
+      {links.map((l) => {
+        const active = l.href === activeHref;
+        return (
+          <Link
+            key={l.href}
+            ref={(el) => {
+              if (el) items.current.set(l.href, el);
+              else items.current.delete(l.href);
+            }}
+            href={l.href}
+            aria-current={active ? 'page' : undefined}
+            className={`relative z-10 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
+              active ? 'text-on-inverse' : 'text-content-secondary hover:text-content'
+            }`}
+          >
+            {l.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

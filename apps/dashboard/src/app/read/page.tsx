@@ -12,34 +12,57 @@ interface PostSummary {
   tags: { slug: string; name: string }[];
 }
 
-async function fetchPosts(): Promise<PostSummary[]> {
-  const res = await fetch(`${API_URL}/api/v1/posts?limit=20`, { cache: 'no-store' });
-  if (!res.ok) return [];
-  const { data } = await res.json();
-  return data;
+/**
+ * `null` means the API could not be reached at all, which is a different
+ * thing to say than "nothing published yet" — an unreachable server used to
+ * take the whole page down with a 500.
+ */
+async function fetchPosts(): Promise<PostSummary[] | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/posts?limit=20`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 export default async function ReadIndex() {
-  const posts = await fetchPosts();
+  const result = await fetchPosts();
+  const posts = result ?? [];
+  const unreachable = result === null;
   const [featured, ...rest] = posts;
 
   return (
     <div className="space-y-12">
       <header className="space-y-2">
-        <span className="text-[10px] uppercase tracking-widest text-indigo-600 font-semibold">
-          The blog
-        </span>
-        <h1 className="text-4xl font-semibold tracking-tight">Latest writing</h1>
-        <p className="text-slate-500">
-          {posts.length} published {posts.length === 1 ? 'post' : 'posts'} · Quiet corner of the
-          internet where ideas get the time they deserve..
+        <span className="t-label text-accent">The blog</span>
+        <h1 className="t-display">Latest writing</h1>
+        <p className="t-secondary">
+          {unreachable
+            ? 'A quiet corner of the internet where ideas get the time they deserve.'
+            : `${posts.length} published ${posts.length === 1 ? 'post' : 'posts'} · a quiet corner of the internet where ideas get the time they deserve.`}
         </p>
       </header>
+
+      {unreachable && (
+        <div className="note note-warning py-8 text-center">
+          <p className="t-body">The posts could not be loaded just now.</p>
+          <p className="t-caption mt-1">Refresh in a moment — nothing has been lost.</p>
+        </div>
+      )}
+
+      {!unreachable && posts.length === 0 && (
+        <p className="t-body text-content-secondary py-16 text-center">
+          Nothing published yet. Check back soon.
+        </p>
+      )}
 
       {featured && (
         <Link
           href={`/read/${featured.slug}`}
-          className="block group rounded-2xl overflow-hidden border border-slate-200/60 bg-gradient-to-br from-slate-50 to-white hover-lift animate-slideUp"
+          className="block group rounded-2xl overflow-hidden border border-line bg-surface hover-lift animate-slideUp"
         >
           {featured.cover_image && (
             <div className="aspect-[2/1] overflow-hidden">
@@ -51,16 +74,14 @@ export default async function ReadIndex() {
             </div>
           )}
           <div className="p-8">
-            <span className="text-[10px] uppercase tracking-widest text-indigo-600 font-semibold">
-              Featured
-            </span>
-            <h2 className="text-2xl font-semibold tracking-tight mt-2 group-hover:text-indigo-600 transition-colors">
+            <span className="t-label text-accent">Latest</span>
+            <h2 className="t-title mt-2 group-hover:text-accent transition-colors">
               {featured.title}
             </h2>
             {featured.excerpt && (
-              <p className="text-slate-600 mt-3 leading-relaxed">{featured.excerpt}</p>
+              <p className="t-body text-content-secondary mt-3">{featured.excerpt}</p>
             )}
-            <p className="text-xs text-slate-400 mt-4">
+            <p className="t-caption mt-4">
               by {featured.author.name}
               {featured.published_date &&
                 ` · ${new Date(featured.published_date).toLocaleDateString()}`}
@@ -75,17 +96,11 @@ export default async function ReadIndex() {
             <li key={p.id}>
               <Link
                 href={`/read/${p.slug}`}
-                className="block group h-full p-6 rounded-2xl border border-slate-200/60 hover:border-slate-300 hover-lift"
+                className="block group h-full p-6 rounded-2xl border border-line hover:border-line-strong hover-lift"
               >
-                <h2 className="text-lg font-semibold tracking-tight group-hover:text-indigo-600 transition-colors">
-                  {p.title}
-                </h2>
-                {p.excerpt && (
-                  <p className="text-slate-600 text-sm mt-2 leading-relaxed line-clamp-3">
-                    {p.excerpt}
-                  </p>
-                )}
-                <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
+                <h2 className="t-heading group-hover:text-accent transition-colors">{p.title}</h2>
+                {p.excerpt && <p className="t-secondary mt-2 line-clamp-3">{p.excerpt}</p>}
+                <div className="mt-4 flex items-center gap-2 t-caption">
                   <span>{p.author.name}</span>
                   {p.published_date && (
                     <>
@@ -99,7 +114,7 @@ export default async function ReadIndex() {
                     {p.tags.slice(0, 4).map((t) => (
                       <span
                         key={t.slug}
-                        className="text-[10px] uppercase tracking-wider text-slate-500 bg-slate-100 rounded-full px-2 py-0.5"
+                        className="text-[0.6875rem] tracking-[0.02em] text-content-secondary bg-surface-sunken rounded-full px-2 py-0.5"
                       >
                         {t.slug}
                       </span>

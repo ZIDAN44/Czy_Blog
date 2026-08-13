@@ -10,7 +10,8 @@ import { DOMParser as PMDOMParser, type Schema } from '@tiptap/pm/model';
 import { marked } from 'marked';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
-import { useNotify } from '@/components/ConfirmDialog';
+import { Modal } from '@/components/Overlay';
+import { useToast } from '@/components/Toast';
 
 const lowlight = createLowlight(common);
 
@@ -33,9 +34,27 @@ function htmlToSlice(html: string, schema: Schema) {
   return PMDOMParser.fromSchema(schema).parseSlice(dom);
 }
 
+const LinkIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
 // Link modal
 
 interface LinkModalProps {
+  open: boolean;
   initialUrl: string;
   hasExisting: boolean;
   onClose: () => void;
@@ -43,19 +62,20 @@ interface LinkModalProps {
   onRemove: () => void;
 }
 
-function LinkModal({ initialUrl, hasExisting, onClose, onSubmit, onRemove }: LinkModalProps) {
+function LinkModal({ open, initialUrl, hasExisting, onClose, onSubmit, onRemove }: LinkModalProps) {
   const [url, setUrl] = useState(initialUrl);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // The field belongs to this opening, not to the last one.
   useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    if (!open) return;
+    setUrl(initialUrl);
+    const id = window.setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [open, initialUrl]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,49 +85,32 @@ function LinkModal({ initialUrl, hasExisting, onClose, onSubmit, onRemove }: Lin
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md animate-fadeIn"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="link-modal-title"
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy="link-modal-title"
+      // There is typed input in here — a stray click on the backdrop should
+      // not throw it away.
+      dismissOnScrim={false}
     >
-      <form
-        onSubmit={submit}
-        className="bg-white rounded-2xl shadow-2xl ring-1 ring-slate-900/5 max-w-md w-full p-6 animate-popIn"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <form onSubmit={submit}>
         <div className="flex items-start gap-4">
-          <div className="grid place-items-center flex-shrink-0 w-10 h-10 rounded-full bg-indigo-100 text-indigo-700">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-5 h-5"
-              aria-hidden
-            >
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
+          <div className="grid place-items-center flex-shrink-0 w-10 h-10 rounded-full bg-accent-soft text-accent-content">
+            <LinkIcon className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 id="link-modal-title" className="font-semibold text-slate-900">
+            <h2 id="link-modal-title" className="t-heading text-content">
               {hasExisting ? 'Edit link' : 'Insert link'}
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Add a URL — leave blank and press Remove to unlink.
-            </p>
+            <p className="t-secondary mt-1">Point the selected text somewhere.</p>
           </div>
         </div>
 
         <label className="block mt-5">
-          <span className="text-xs font-medium text-slate-600">URL</span>
+          <span className="t-caption font-medium text-content-secondary">URL</span>
           <input
             ref={inputRef}
+            data-autofocus
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com"
@@ -116,21 +119,13 @@ function LinkModal({ initialUrl, hasExisting, onClose, onSubmit, onRemove }: Lin
           />
         </label>
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           {hasExisting && (
-            <button
-              type="button"
-              onClick={onRemove}
-              className="px-4 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100 transition-colors mr-auto"
-            >
+            <button type="button" onClick={onRemove} className="btn btn-danger sm:mr-auto">
               Remove link
             </button>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium hover:bg-slate-50 transition-colors"
-          >
+          <button type="button" onClick={onClose} className="btn btn-secondary">
             Cancel
           </button>
           <button type="submit" className="btn btn-primary">
@@ -138,18 +133,15 @@ function LinkModal({ initialUrl, hasExisting, onClose, onSubmit, onRemove }: Lin
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
 
 // Toolbar
 
 function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => void }) {
-  const notify = useNotify();
-  const btn = (active: boolean) =>
-    `inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg text-sm font-medium transition-colors ${
-      active ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-white hover:text-slate-900'
-    }`;
+  const toast = useToast();
+  const [uploading, setUploading] = useState(false);
 
   const uploadImage = useCallback(async () => {
     const input = document.createElement('input');
@@ -160,6 +152,7 @@ function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => voi
       if (!file) return;
       const fd = new FormData();
       fd.append('file', file);
+      setUploading(true);
       try {
         const { url } = await api<{ url: string }>('/api/v1/media/upload', {
           method: 'POST',
@@ -167,138 +160,184 @@ function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => voi
         });
         editor.chain().focus().setImage({ src: url }).run();
       } catch (e) {
-        notify({ title: 'Upload failed', message: (e as Error).message, tone: 'danger' });
+        toast({ title: 'Upload failed', message: (e as Error).message, tone: 'error' });
+      } finally {
+        setUploading(false);
       }
     };
     input.click();
-  }, [editor, notify]);
+  }, [editor, toast]);
 
-  const Divider = () => <span className="w-px bg-slate-200 mx-1 self-stretch" />;
+  const Divider = () => <span className="w-px bg-line-strong mx-1 self-stretch my-1" aria-hidden />;
+
+  // Grouped by what they do to the text: marks, then structure, then inserts,
+  // then history. Proximity is doing the explaining, so nothing needs a label.
+  const marks = [
+    {
+      key: 'bold',
+      title: 'Bold',
+      body: <strong>B</strong>,
+      run: () => editor.chain().focus().toggleBold().run(),
+    },
+    {
+      key: 'italic',
+      title: 'Italic',
+      body: <i>I</i>,
+      run: () => editor.chain().focus().toggleItalic().run(),
+    },
+    {
+      key: 'strike',
+      title: 'Strikethrough',
+      body: <s>S</s>,
+      run: () => editor.chain().focus().toggleStrike().run(),
+    },
+  ];
+
+  const blocks = [
+    {
+      key: 'heading1',
+      title: 'Heading 1',
+      body: 'H1',
+      active: editor.isActive('heading', { level: 1 }),
+      run: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+    },
+    {
+      key: 'heading2',
+      title: 'Heading 2',
+      body: 'H2',
+      active: editor.isActive('heading', { level: 2 }),
+      run: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+    },
+    {
+      key: 'heading3',
+      title: 'Heading 3',
+      body: 'H3',
+      active: editor.isActive('heading', { level: 3 }),
+      run: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+    },
+    {
+      key: 'bulletList',
+      title: 'Bullet list',
+      body: '•',
+      active: editor.isActive('bulletList'),
+      run: () => editor.chain().focus().toggleBulletList().run(),
+    },
+    {
+      key: 'orderedList',
+      title: 'Numbered list',
+      body: '1.',
+      active: editor.isActive('orderedList'),
+      run: () => editor.chain().focus().toggleOrderedList().run(),
+    },
+    {
+      key: 'blockquote',
+      title: 'Blockquote',
+      body: '❝',
+      active: editor.isActive('blockquote'),
+      run: () => editor.chain().focus().toggleBlockquote().run(),
+    },
+    {
+      key: 'codeBlock',
+      title: 'Code block',
+      body: '</>',
+      active: editor.isActive('codeBlock'),
+      run: () => editor.chain().focus().toggleCodeBlock().run(),
+    },
+  ];
 
   return (
-    <div className="flex flex-wrap items-center gap-1 p-2 border-b border-slate-100 bg-slate-50/50">
-      <button
-        title="Bold"
-        className={btn(editor.isActive('bold'))}
-        onClick={() => editor.chain().focus().toggleBold().run()}
-      >
-        <strong>B</strong>
-      </button>
-      <button
-        title="Italic"
-        className={btn(editor.isActive('italic'))}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-      >
-        <i>I</i>
-      </button>
-      <button
-        title="Strikethrough"
-        className={btn(editor.isActive('strike'))}
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-      >
-        <s>S</s>
-      </button>
+    <div className="material-thin sticky top-14 z-10 flex flex-wrap items-center gap-1 p-2 rounded-t-xl border-b border-line">
+      {marks.map((m) => (
+        <ToolButton key={m.key} title={m.title} active={editor.isActive(m.key)} onClick={m.run}>
+          {m.body}
+        </ToolButton>
+      ))}
       <Divider />
-      <button
-        title="Heading 1"
-        className={btn(editor.isActive('heading', { level: 1 }))}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-      >
-        H1
-      </button>
-      <button
-        title="Heading 2"
-        className={btn(editor.isActive('heading', { level: 2 }))}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-      >
-        H2
-      </button>
-      <button
-        title="Heading 3"
-        className={btn(editor.isActive('heading', { level: 3 }))}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-      >
-        H3
-      </button>
+      {blocks.map((b) => (
+        <ToolButton key={b.key} title={b.title} active={b.active} onClick={b.run}>
+          {b.body}
+        </ToolButton>
+      ))}
       <Divider />
-      <button
-        title="Bullet list"
-        className={btn(editor.isActive('bulletList'))}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
+      <ToolButton title="Link" active={editor.isActive('link')} onClick={onOpenLink}>
+        <LinkIcon />
+      </ToolButton>
+      <ToolButton
+        title={uploading ? 'Uploading image…' : 'Insert image'}
+        active={false}
+        disabled={uploading}
+        onClick={uploadImage}
       >
-        •
-      </button>
-      <button
-        title="Numbered list"
-        className={btn(editor.isActive('orderedList'))}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-      >
-        1.
-      </button>
-      <button
-        title="Blockquote"
-        className={btn(editor.isActive('blockquote'))}
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-      >
-        ❝
-      </button>
-      <button
-        title="Code block"
-        className={btn(editor.isActive('codeBlock'))}
-        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-      >
-        {'</>'}
-      </button>
+        {uploading ? (
+          <span className="skeleton block w-4 h-4 rounded" aria-hidden />
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4"
+            aria-hidden
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-5-5L5 21" />
+          </svg>
+        )}
+      </ToolButton>
       <Divider />
-      <button title="Link" className={btn(editor.isActive('link'))} onClick={onOpenLink}>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-4 h-4"
-          aria-hidden
-        >
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-        </svg>
-      </button>
-      <button title="Insert image" className={btn(false)} onClick={uploadImage}>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-4 h-4"
-          aria-hidden
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="9" cy="9" r="2" />
-          <path d="m21 15-5-5L5 21" />
-        </svg>
-      </button>
-      <Divider />
-      <button
+      <ToolButton
         title="Undo"
-        className={btn(false)}
+        active={false}
+        disabled={!editor.can().undo()}
         onClick={() => editor.chain().focus().undo().run()}
       >
         ↶
-      </button>
-      <button
+      </ToolButton>
+      <ToolButton
         title="Redo"
-        className={btn(false)}
+        active={false}
+        disabled={!editor.can().redo()}
         onClick={() => editor.chain().focus().redo().run()}
       >
         ↷
-      </button>
+      </ToolButton>
     </div>
+  );
+}
+
+function ToolButton({
+  title,
+  active,
+  onClick,
+  disabled,
+  children,
+}: {
+  title: string;
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg text-sm font-medium disabled:opacity-35 ${
+        active
+          ? 'bg-inverse text-on-inverse'
+          : 'text-content-secondary hover:bg-surface hover:text-content hover:shadow-sm'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -345,36 +384,42 @@ export default function BlockEditor({ initialContent, onChange }: Props) {
   });
 
   if (!editor)
-    return <div className="h-[400px] grid place-items-center text-slate-400">Loading editor…</div>;
+    return (
+      <div className="rounded-xl border border-line bg-surface/60 p-5 space-y-3">
+        <div className="skeleton h-8 w-full" />
+        <div className="skeleton h-4 w-3/4" />
+        <div className="skeleton h-4 w-5/6" />
+        <div className="skeleton h-4 w-2/3" />
+      </div>
+    );
 
   const existingHref: string | undefined = editor.getAttributes('link').href;
 
   return (
-    <div className="bg-white border border-slate-200/60 rounded-xl overflow-hidden">
+    <div className="bg-surface/70 border border-line rounded-xl">
       <Toolbar editor={editor} onOpenLink={() => setLinkOpen(true)} />
       <div className="p-5">
         <EditorContent editor={editor} />
       </div>
-      {linkOpen && (
-        <LinkModal
-          initialUrl={existingHref ?? 'https://'}
-          hasExisting={Boolean(existingHref)}
-          onClose={() => setLinkOpen(false)}
-          onSubmit={(url) => {
-            editor
-              .chain()
-              .focus()
-              .extendMarkRange('link')
-              .setLink({ href: url, target: '_blank' })
-              .run();
-            setLinkOpen(false);
-          }}
-          onRemove={() => {
-            editor.chain().focus().extendMarkRange('link').unsetLink().run();
-            setLinkOpen(false);
-          }}
-        />
-      )}
+      <LinkModal
+        open={linkOpen}
+        initialUrl={existingHref ?? 'https://'}
+        hasExisting={Boolean(existingHref)}
+        onClose={() => setLinkOpen(false)}
+        onSubmit={(url) => {
+          editor
+            .chain()
+            .focus()
+            .extendMarkRange('link')
+            .setLink({ href: url, target: '_blank' })
+            .run();
+          setLinkOpen(false);
+        }}
+        onRemove={() => {
+          editor.chain().focus().extendMarkRange('link').unsetLink().run();
+          setLinkOpen(false);
+        }}
+      />
     </div>
   );
 }

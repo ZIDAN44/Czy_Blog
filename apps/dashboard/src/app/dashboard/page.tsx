@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, currentUser, type PostStatus } from '@/lib/api';
-import { STATUS_PILL } from '@/lib/utils';
+import { STATUS_PILL, errMsg } from '@/lib/utils';
 
 interface PostSummary {
   id: string;
@@ -13,12 +13,14 @@ interface PostSummary {
   updated_at: string;
 }
 
-const STATUS_META: Record<PostStatus, { label: string; ring: string }> = {
-  DRAFT: { label: 'Drafts', ring: 'from-slate-200 to-slate-100' },
-  PENDING_REVIEW: { label: 'In review', ring: 'from-amber-200 to-amber-100' },
-  SCHEDULED: { label: 'Scheduled', ring: 'from-sky-200 to-sky-100' },
-  PUBLISHED: { label: 'Published', ring: 'from-emerald-200 to-emerald-100' },
-  ARCHIVED: { label: 'Archived', ring: 'from-rose-200 to-rose-100' },
+// The glow behind each tile is the status colour itself, so it re-tints with
+// the theme instead of staying a pastel that only works on white.
+const STATUS_META: Record<PostStatus, { label: string; glow: string }> = {
+  DRAFT: { label: 'Drafts', glow: 'var(--color-content-tertiary)' },
+  PENDING_REVIEW: { label: 'In review', glow: 'var(--color-warning)' },
+  SCHEDULED: { label: 'Scheduled', glow: 'var(--color-info-content)' },
+  PUBLISHED: { label: 'Published', glow: 'var(--color-success)' },
+  ARCHIVED: { label: 'Archived', glow: 'var(--color-danger)' },
 };
 
 const emptyCounts = (): Record<PostStatus, number> => ({
@@ -35,39 +37,51 @@ export default function Overview() {
   const [allPosts, setAllPosts] = useState<PostSummary[]>([]);
   const [filter, setFilter] = useState<PostStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const { data } = await api<{ data: PostSummary[] }>('/api/v1/admin/posts?limit=100');
       const tally = emptyCounts();
       for (const p of data) tally[p.status]++;
       setCounts(tally);
       setAllPosts(data);
+    } catch (e) {
+      setError(errMsg(e, 'Could not reach the server.'));
+    } finally {
       setLoading(false);
-    })().catch(console.error);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const recent = (filter ? allPosts.filter((p) => p.status === filter) : allPosts).slice(0, 6);
   const greeting = (() => {
     const h = new Date().getHours();
-    if (h < 5) return 'Up Late';
-    if (h < 12) return 'Good Morning';
-    if (h < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (h < 5) return 'Up late';
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
   })();
 
   return (
     <div className="space-y-10">
       <header className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <p className="text-sm text-slate-500">{greeting}!</p>
-          <h1 className="text-3xl font-semibold tracking-tight">{me?.name?.split(' ')[0]}</h1>
+          <p className="t-secondary">{greeting}</p>
+          <h1 className="t-display mt-0.5">{me?.name?.split(' ')[0]}</h1>
         </div>
         <Link href="/dashboard/posts/new" className="btn btn-primary">
           <span aria-hidden>+</span> New post
         </Link>
       </header>
 
+      {/* Counts double as filters — the control sits on the thing it changes,
+          so no label is needed to explain the mapping. */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 stagger">
         {(Object.keys(counts) as PostStatus[]).map((k) => {
           const meta = STATUS_META[k];
@@ -76,29 +90,27 @@ export default function Overview() {
             <button
               key={k}
               type="button"
+              aria-pressed={active}
               onClick={() => setFilter(active ? null : k)}
-              className={`group relative overflow-hidden text-left rounded-2xl p-4 transition-all ${
+              className={`group relative overflow-hidden text-left rounded-2xl p-4 transition-colors ${
                 active
-                  ? 'bg-slate-900 text-white border border-slate-900 shadow-lg'
-                  : 'card hover:-translate-y-0.5 hover:shadow-md'
+                  ? 'bg-inverse text-on-inverse border border-inverse shadow-[var(--shadow-raised)]'
+                  : 'card hover-lift'
               }`}
             >
               {!active && (
                 <div
-                  className={`absolute -top-8 -right-8 w-24 h-24 rounded-full bg-gradient-to-br ${meta.ring} opacity-60 blur-2xl`}
+                  className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-40 blur-2xl"
+                  style={{ background: meta.glow }}
                   aria-hidden
                 />
               )}
               <div className="relative">
-                <div
-                  className={`text-[10px] uppercase tracking-widest font-semibold ${
-                    active ? 'text-slate-300' : 'text-slate-500'
-                  }`}
-                >
+                <div className={`t-label ${active ? 'text-on-inverse opacity-65' : ''}`}>
                   {meta.label}
                 </div>
-                <div className="text-3xl font-semibold mt-2 tracking-tight">
-                  {loading ? <span className="text-slate-300">—</span> : counts[k]}
+                <div className="mt-2 text-3xl font-semibold tracking-[-0.02em] leading-none">
+                  {loading ? <span className="skeleton block h-8 w-10" aria-hidden /> : counts[k]}
                 </div>
               </div>
             </button>
@@ -107,48 +119,77 @@ export default function Overview() {
       </div>
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">Recent posts</h2>
+            <h2 className="t-heading">Recent posts</h2>
             {filter && (
-              <p className="text-xs text-slate-500 mt-0.5">
-                Filtered to {STATUS_META[filter].label.toLowerCase()} —{' '}
-                <button onClick={() => setFilter(null)} className="underline">
-                  clear
+              <p className="t-caption mt-0.5">
+                Showing {STATUS_META[filter].label.toLowerCase()} ·{' '}
+                <button onClick={() => setFilter(null)} className="underline underline-offset-2">
+                  show all
                 </button>
               </p>
             )}
           </div>
-          <Link href="/dashboard/posts" className="text-xs text-slate-500 hover:text-slate-900">
-            View all →
+          <Link href="/dashboard/posts" className="t-caption hover:text-content">
+            All posts →
           </Link>
         </div>
-        <div className="card divide-y divide-slate-100 overflow-hidden stagger">
-          {loading && <div className="px-5 py-10 text-sm text-slate-400 text-center">Loading…</div>}
-          {!loading && recent.length === 0 && (
-            <div className="px-5 py-12 text-center">
-              <p className="text-sm text-slate-500">No posts here yet.</p>
+
+        <div className="card divide-y divide-line overflow-hidden">
+          {/* A failure says what happened and offers the way out of it. */}
+          {error && !loading && (
+            <div className="px-5 py-12 text-center space-y-3">
+              <p className="t-body text-content">{error}</p>
+              <button onClick={load} className="btn btn-secondary">
+                Try again
+              </button>
+            </div>
+          )}
+
+          {loading &&
+            [0, 1, 2].map((i) => (
+              <div key={i} className="px-5 py-4 flex items-center gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-4 w-1/3" />
+                  <div className="skeleton h-3 w-1/5" />
+                </div>
+                <div className="skeleton h-5 w-20 rounded-full" />
+              </div>
+            ))}
+
+          {!loading && !error && recent.length === 0 && (
+            <div className="px-5 py-14 text-center">
+              <p className="t-body text-content-secondary">
+                {filter
+                  ? `Nothing ${STATUS_META[filter].label.toLowerCase()} right now.`
+                  : 'No posts yet.'}
+              </p>
               <Link href="/dashboard/posts/new" className="btn btn-primary mt-4">
                 Write your first post
               </Link>
             </div>
           )}
-          {recent.map((p) => (
-            <Link
-              key={p.id}
-              href={`/dashboard/posts/${p.id}/edit`}
-              className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{p.title || '(untitled)'}</div>
-                <div className="text-xs text-slate-500 mt-0.5 font-mono">/{p.slug}</div>
-              </div>
-              <span className={`pill ${STATUS_PILL[p.status]}`}>{p.status.replace('_', ' ')}</span>
-              <span className="text-xs text-slate-400 hidden sm:inline">
-                {new Date(p.updated_at).toLocaleDateString()}
-              </span>
-            </Link>
-          ))}
+
+          {!loading &&
+            recent.map((p) => (
+              <Link
+                key={p.id}
+                href={`/dashboard/posts/${p.id}/edit`}
+                className="flex items-center gap-4 px-5 py-3.5 hover:bg-fill-hover"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="t-subheading truncate">{p.title || 'Untitled'}</div>
+                  <div className="t-caption mt-0.5 font-mono truncate">/{p.slug}</div>
+                </div>
+                <span className={`pill ${STATUS_PILL[p.status]}`}>
+                  {p.status.replace('_', ' ')}
+                </span>
+                <span className="t-caption hidden sm:inline tabular-nums">
+                  {new Date(p.updated_at).toLocaleDateString()}
+                </span>
+              </Link>
+            ))}
         </div>
       </section>
     </div>

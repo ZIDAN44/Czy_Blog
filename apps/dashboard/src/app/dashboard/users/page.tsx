@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, currentUser, type Role } from '@/lib/api';
 import { useConfirm, useNotify } from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 import { errMsg, initials } from '@/lib/utils';
 
 interface UserRow {
@@ -23,16 +24,17 @@ const ROLE_DESCRIPTIONS: Record<Role, string> = {
 };
 
 const ROLE_COLOR: Record<Role, string> = {
-  SUPER_ADMIN: 'bg-violet-100 text-violet-700 border-violet-200',
-  EDITOR: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-  AUTHOR: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  CONTRIBUTOR: 'bg-slate-100 text-slate-700 border-slate-200',
+  SUPER_ADMIN: 'bg-accent-soft text-accent-content border-transparent',
+  EDITOR: 'bg-info-soft text-info-content border-transparent',
+  AUTHOR: 'bg-success-soft text-success-content border-transparent',
+  CONTRIBUTOR: 'bg-surface-sunken text-content-secondary border-transparent',
 };
 
 export default function UsersPage() {
   const router = useRouter();
   const confirm = useConfirm();
   const notify = useNotify();
+  const toast = useToast();
   const me = currentUser();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +79,11 @@ export default function UsersPage() {
     setError(null);
     try {
       await api('/api/v1/users', { method: 'POST', body: JSON.stringify(form) });
+      toast({
+        title: 'Account created',
+        message: `${form.name} can sign in now.`,
+        tone: 'success',
+      });
       setForm({ email: '', name: '', password: '', role: '' });
       setShowCreate(false);
       load();
@@ -99,6 +106,11 @@ export default function UsersPage() {
     if (!ok) return;
     try {
       await api(`/api/v1/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
+      toast({
+        title: 'Role updated',
+        message: `${user?.name ?? 'User'} is now ${role}.`,
+        tone: 'success',
+      });
       load();
     } catch (e) {
       notify({
@@ -120,6 +132,7 @@ export default function UsersPage() {
     if (!ok) return;
     try {
       await api(`/api/v1/users/${id}`, { method: 'DELETE' });
+      toast({ title: 'User deleted', message: user?.name, tone: 'success' });
       load();
     } catch (e) {
       notify({
@@ -134,8 +147,8 @@ export default function UsersPage() {
     <div className="space-y-8">
       <header className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Users</h1>
-          <p className="text-sm text-slate-500 mt-1 max-w-xl">
+          <h1 className="t-display">Users</h1>
+          <p className="t-secondary mt-1 max-w-xl">
             {isSuper
               ? 'Create accounts for editors, authors, and contributors. Assign roles based on what each person should do.'
               : 'You can see all users on the platform. Only a super admin can create or change accounts.'}
@@ -149,10 +162,8 @@ export default function UsersPage() {
       </header>
 
       <section className="card p-5">
-        <h2 className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
-          Role legend
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <h2 className="t-label mb-3">What each role can do</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 t-body">
           {ROLES.map((r) => (
             <div key={r} className="flex items-start gap-3">
               <span
@@ -161,7 +172,7 @@ export default function UsersPage() {
               >
                 {r.replace('_', ' ')}
               </span>
-              <p className="text-slate-600">{ROLE_DESCRIPTIONS[r]}</p>
+              <p className="text-content-secondary">{ROLE_DESCRIPTIONS[r]}</p>
             </div>
           ))}
         </div>
@@ -169,12 +180,8 @@ export default function UsersPage() {
 
       {isSuper && showCreate && (
         <section className="card p-5 space-y-3 animate-slideUp">
-          <h2 className="font-semibold">Create user</h2>
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
+          <h2 className="t-heading">Create user</h2>
+          {error && <p className="note note-danger t-body">{error}</p>}
           <form
             onSubmit={createUser}
             className="grid grid-cols-1 md:grid-cols-5 gap-2"
@@ -268,22 +275,22 @@ export default function UsersPage() {
         </section>
       )}
 
-      <section className="card divide-y divide-slate-100 overflow-hidden">
+      <section className="card divide-y divide-line overflow-hidden">
         {users.map((u) => (
-          <div key={u.id} className="px-5 py-4 flex items-center gap-4 text-sm">
-            <span className="grid place-items-center w-9 h-9 rounded-full bg-gradient-to-br from-slate-200 to-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+          <div key={u.id} className="px-5 py-4 flex items-center gap-4">
+            <span className="grid place-items-center w-9 h-9 rounded-full bg-surface-sunken text-content-secondary text-xs font-semibold border border-line">
               {initials(u.name)}
             </span>
             <div className="flex-1 min-w-0">
-              <div className="font-medium flex items-center gap-2">
+              <div className="t-subheading flex items-center gap-2">
                 <span className="truncate">{u.name}</span>
                 {u.id === me?.id && (
-                  <span className="text-[10px] uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-1.5 py-0.5">
+                  <span className="text-[10px] uppercase tracking-[0.09em] font-semibold text-accent bg-accent-soft border border-line rounded-full px-1.5 py-0.5">
                     you
                   </span>
                 )}
               </div>
-              <div className="text-xs text-slate-500 mt-0.5">
+              <div className="t-caption mt-0.5 truncate">
                 {u.email} · joined {new Date(u.createdAt).toLocaleDateString()}
               </div>
             </div>
@@ -315,7 +322,7 @@ export default function UsersPage() {
           </div>
         ))}
         {users.length === 0 && (
-          <p className="px-5 py-10 text-sm text-slate-500 text-center">No users.</p>
+          <p className="px-5 py-12 t-body text-content-secondary text-center">No users yet.</p>
         )}
       </section>
     </div>

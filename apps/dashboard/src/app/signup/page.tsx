@@ -54,7 +54,7 @@ export default function SignupPage() {
 
   return (
     <main className="min-h-screen grid lg:grid-cols-2">
-      <aside className="hidden lg:flex relative overflow-hidden bg-slate-950 text-white p-12 flex-col justify-between">
+      <aside className="hidden lg:flex relative overflow-hidden bg-brand-panel text-on-brand border-r border-line p-12 flex-col justify-between">
         <div
           aria-hidden
           className="absolute inset-0 opacity-60"
@@ -65,34 +65,32 @@ export default function SignupPage() {
           }}
         />
         <div className="relative flex items-center gap-2.5">
-          <Logo className="w-9 h-9 text-white" />
+          <Logo className="w-9 h-9 text-on-brand" />
           <span className="font-semibold tracking-tight text-lg">Czy Blog</span>
         </div>
         <div className="relative space-y-4 max-w-md">
           <span className="inline-block text-[10px] uppercase tracking-widest bg-white/10 border border-white/15 rounded-full px-2.5 py-1 font-medium">
             First-run setup
           </span>
-          <h2 className="text-3xl font-semibold tracking-tight leading-tight">
-            Claim your install!
-          </h2>
-          <p className="text-slate-300 text-sm leading-relaxed">
+          <h2 className="t-display leading-tight">Claim your install!</h2>
+          <p className="text-brand-muted t-body">
             This first account becomes the super admin | From there, you can invite editors,
             authors, contributors and manage your blog!
           </p>
         </div>
-        <div className="relative text-xs text-slate-400">© Czy Blog</div>
+        <div className="relative text-xs text-brand-muted">© Czy Blog</div>
       </aside>
 
       <section className="flex items-center justify-center p-6 sm:p-10">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5 animate-slideUp">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Create the super admin</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="t-title">Create the super admin</h1>
+            <p className="t-secondary mt-1">
               You're the first user — this account gets full access.
             </p>
           </div>
           <label className="block">
-            <span className="text-xs font-medium text-slate-600">Your name</span>
+            <span className="t-caption font-medium text-content-secondary">Your name</span>
             <input
               className="input mt-1"
               value={name}
@@ -102,7 +100,7 @@ export default function SignupPage() {
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-slate-600">Email</span>
+            <span className="t-caption font-medium text-content-secondary">Email</span>
             <input
               className="input mt-1"
               value={email}
@@ -114,7 +112,7 @@ export default function SignupPage() {
             />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-slate-600">Password</span>
+            <span className="t-caption font-medium text-content-secondary">Password</span>
             <input
               className="input mt-1"
               value={password}
@@ -125,10 +123,10 @@ export default function SignupPage() {
               autoComplete="new-password"
               placeholder="At least 8 characters"
             />
-            <span className="text-xs text-slate-400">Minimum 8 characters.</span>
+            <span className="t-caption mt-1 block">Minimum 8 characters.</span>
           </label>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+            <p role="alert" className="note note-danger t-body animate-slideUp">
               {error}
             </p>
           )}
