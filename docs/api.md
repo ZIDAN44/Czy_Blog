@@ -153,6 +153,9 @@ flattened shape (`link`, `published_date`, `cover_image`, …).
 curl -H "x-api-key: czk_xxx" http://localhost:4000/api/v1/content/posts
 ```
 
+Getting a key, keeping it server-side, caching and rotation:
+[using the Content API](content-api.md).
+
 ## Other
 
 | Method | Path             | Auth   | Purpose                       |
