@@ -16,6 +16,6 @@ import { config as loadDotenv } from 'dotenv';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-export const ENV_FILE = path.resolve(here, '..', '..', '..', '.env');
+const ENV_FILE = path.resolve(here, '..', '..', '..', '.env');
 
 loadDotenv({ path: ENV_FILE, quiet: true });

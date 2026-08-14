@@ -21,6 +21,22 @@ function usePortal(): HTMLElement | null {
   return host;
 }
 
+/**
+ * Escape dismisses whatever surface is up. Every overlay below needs it, and
+ * it must only listen while the surface is actually mounted — a stale listener
+ * would close a surface that has already left.
+ */
+function useEscapeKey(active: boolean, onClose: () => void) {
+  useEffect(() => {
+    if (!active) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, onClose]);
+}
+
 /* ------------------------------------------------------------------ *
  * Modal — a centred surface for a task that blocks
  *
@@ -66,15 +82,7 @@ export function Modal({
   }, [open, progress]);
 
   useScrollLock(mounted);
-
-  useEffect(() => {
-    if (!mounted) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [mounted, onClose]);
+  useEscapeKey(mounted, onClose);
 
   const scrimRef = useSpringEffect(progress, (el, p) => {
     el.style.opacity = String(p);
@@ -203,14 +211,7 @@ export function Sheet({
     [open, y, trapRef],
   );
 
-  useEffect(() => {
-    if (!mounted) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [mounted, onClose]);
+  useEscapeKey(mounted, onClose);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -332,21 +333,18 @@ export function Popover({
     el.style.transform = `scale(${0.92 + 0.08 * p})`;
   });
 
+  useEscapeKey(mounted, onClose);
+
   useEffect(() => {
     if (!mounted) return;
     function onDown(e: MouseEvent) {
       if (!panelRef.current?.contains(e.target as Node)) onClose();
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
     // Deferred so the click that opened it does not immediately close it.
     const id = window.setTimeout(() => document.addEventListener('mousedown', onDown), 0);
-    window.addEventListener('keydown', onKey);
     return () => {
       window.clearTimeout(id);
       document.removeEventListener('mousedown', onDown);
-      window.removeEventListener('keydown', onKey);
     };
   }, [mounted, onClose]);
 

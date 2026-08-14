@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import AuthShell from '@/components/AuthShell';
 import Logo from '@/components/Logo';
-import { api, currentUser, setSession, type SessionUser } from '@/lib/api';
+import { api, currentUser, needsBootstrap, setSession, type SessionUser } from '@/lib/api';
 import { errMsg } from '@/lib/utils';
 
 export default function LoginPage() {
@@ -20,10 +21,7 @@ export default function LoginPage() {
     }
     (async () => {
       try {
-        const r = await api<{ needsBootstrap: boolean }>('/api/v1/auth/bootstrap-status', {
-          skipAuth: true,
-        });
-        if (r.needsBootstrap) router.replace('/signup');
+        if (await needsBootstrap()) router.replace('/signup');
       } catch {
         /* API might be down — let the user try anyway */
       } finally {
@@ -57,76 +55,62 @@ export default function LoginPage() {
   if (checking) return null;
 
   return (
-    <main className="min-h-screen grid lg:grid-cols-2">
-      {/* Brand panel */}
-      <aside className="hidden lg:flex relative overflow-hidden bg-brand-panel text-on-brand border-r border-line p-12 flex-col justify-between">
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-60"
-          style={{
-            background:
-              'radial-gradient(600px 400px at 20% 20%, rgba(99,102,241,0.45), transparent 60%),' +
-              'radial-gradient(500px 400px at 80% 80%, rgba(14,165,233,0.35), transparent 60%)',
-          }}
-        />
-        <div className="relative flex items-center gap-2.5">
-          <Logo className="w-9 h-9 text-on-brand" />
-          <span className="font-semibold tracking-tight text-lg">Czy Blog</span>
-        </div>
+    <AuthShell
+      gradient={
+        'radial-gradient(600px 400px at 20% 20%, rgba(99,102,241,0.45), transparent 60%),' +
+        'radial-gradient(500px 400px at 80% 80%, rgba(14,165,233,0.35), transparent 60%)'
+      }
+      panel={
         <div className="relative space-y-4 max-w-sm">
           <h2 className="t-title leading-snug">Welcome back!</h2>
           <p className="text-brand-muted t-body">
             Pick up where you left off | Finish that half-written draft | Start something new :D
           </p>
         </div>
-        <div className="relative text-xs text-brand-muted">© Czy Blog</div>
-      </aside>
-
-      {/* Form panel */}
-      <section className="flex items-center justify-center p-6 sm:p-10">
-        <form onSubmit={submit} className="w-full max-w-sm space-y-5 animate-slideUp">
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <Logo className="w-8 h-8 text-content" />
-            <span className="font-semibold tracking-tight">Czy Blog</span>
-          </div>
-          <div>
-            <h1 className="t-title">Sign in</h1>
-            <p className="t-secondary mt-1">Use your email and password.</p>
-          </div>
-          <label className="block">
-            <span className="t-caption font-medium text-content-secondary">Email</span>
-            <input
-              className="input mt-1"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-            />
-          </label>
-          <label className="block">
-            <span className="t-caption font-medium text-content-secondary">Password</span>
-            <input
-              className="input mt-1"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              required
-              autoComplete="current-password"
-              placeholder="••••••••"
-            />
-          </label>
-          {error && (
-            <p role="alert" className="note note-danger t-body animate-slideUp">
-              {error}
-            </p>
-          )}
-          <button disabled={busy} className="btn btn-primary w-full py-2.5">
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-      </section>
-    </main>
+      }
+    >
+      <form onSubmit={submit} className="w-full max-w-sm space-y-5 animate-slideUp">
+        <div className="lg:hidden flex items-center gap-2 mb-8">
+          <Logo className="w-8 h-8 text-content" />
+          <span className="font-semibold tracking-tight">Czy Blog</span>
+        </div>
+        <div>
+          <h1 className="t-title">Sign in</h1>
+          <p className="t-secondary mt-1">Use your email and password.</p>
+        </div>
+        <label className="block">
+          <span className="t-caption font-medium text-content-secondary">Email</span>
+          <input
+            className="input mt-1"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="you@example.com"
+          />
+        </label>
+        <label className="block">
+          <span className="t-caption font-medium text-content-secondary">Password</span>
+          <input
+            className="input mt-1"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            required
+            autoComplete="current-password"
+            placeholder="••••••••"
+          />
+        </label>
+        {error && (
+          <p role="alert" className="note note-danger t-body animate-slideUp">
+            {error}
+          </p>
+        )}
+        <button disabled={busy} className="btn btn-primary w-full py-2.5">
+          {busy ? 'Signing in…' : 'Sign in'}
+        </button>
+      </form>
+    </AuthShell>
   );
 }

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { customAlphabet } from 'nanoid';
 import { prisma } from '../db.js';
 import { config } from '../config.js';
-import { paginated, paginationSchema } from '../lib/queries.js';
+import { pageArgs, paginated, paginationSchema } from '../lib/queries.js';
 
 const id = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 16);
 
@@ -158,8 +158,7 @@ export async function mediaRoutes(app: FastifyInstance) {
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
-        skip: (q.page - 1) * q.limit,
-        take: q.limit,
+        ...pageArgs(q),
       }),
     ]);
     return { data: list, pagination: paginated(total, q.page, q.limit) };

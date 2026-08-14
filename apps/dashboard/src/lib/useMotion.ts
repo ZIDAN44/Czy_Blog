@@ -1,6 +1,6 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { SpringValue } from '@/lib/motion';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { SPRING_SNAPPY, SpringValue, prefersReducedMotion } from '@/lib/motion';
 
 /** A spring that lives for the lifetime of the component. */
 export function useSpring(initial: number): SpringValue {
@@ -41,6 +41,91 @@ export function useSpringEffect(
   }, [spring]);
 
   return ref;
+}
+
+/**
+ * A single indicator that travels between sibling elements, rather than a
+ * highlight that blinks off here and on over there.
+ *
+ * Position and width ride independent springs: one spring driving both
+ * desynchronises whenever they have different distances to cover (a short
+ * label following a long one is the visible case). Because they are springs,
+ * changing the target mid-flight re-aims from wherever the indicator
+ * currently is — it never snaps back to the start.
+ *
+ * Callers own the markup and supply `setItem(key)` as each item's ref. The
+ * indicator hides itself whenever no item matches `activeKey`.
+ */
+export function useMovingIndicator<
+  K,
+  Track extends HTMLElement = HTMLElement,
+  Indicator extends HTMLElement = HTMLElement,
+>(activeKey: K | null) {
+  const trackRef = useRef<Track | null>(null);
+  const indicatorRef = useRef<Indicator | null>(null);
+  const items = useRef(new Map<K, HTMLElement>());
+  const x = useSpring(0);
+  const width = useSpring(0);
+  const hasSettled = useRef(false);
+
+  const paint = useCallback(() => {
+    const el = indicatorRef.current;
+    if (!el) return;
+    el.style.transform = `translate3d(${x.current}px, 0, 0)`;
+    el.style.width = `${width.current}px`;
+  }, [x, width]);
+
+  useEffect(() => {
+    const off = [x.subscribe(paint), width.subscribe(paint)];
+    return () => off.forEach((fn) => fn());
+  }, [x, width, paint]);
+
+  const measure = useCallback(
+    (animate: boolean) => {
+      const indicator = indicatorRef.current;
+      if (!indicator) return;
+      const el = activeKey === null ? undefined : items.current.get(activeKey);
+      if (!el) {
+        indicator.style.opacity = '0';
+        return;
+      }
+      indicator.style.opacity = '1';
+      if (!animate || prefersReducedMotion()) {
+        x.set(el.offsetLeft);
+        width.set(el.offsetWidth);
+        paint();
+        return;
+      }
+      x.to(el.offsetLeft, SPRING_SNAPPY);
+      width.to(el.offsetWidth, SPRING_SNAPPY);
+    },
+    [activeKey, x, width, paint],
+  );
+
+  // The first placement must not animate in from zero; every later one should.
+  useLayoutEffect(() => {
+    measure(hasSettled.current);
+    hasSettled.current = true;
+  }, [measure]);
+
+  // Layout can change under the indicator — keep it glued to its item.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => measure(false));
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [measure]);
+
+  const setItem = useCallback(
+    (key: K) => (el: HTMLElement | null) => {
+      if (el) items.current.set(key, el);
+      else items.current.delete(key);
+    },
+    [],
+  );
+
+  return { trackRef, indicatorRef, setItem };
 }
 
 export function useMediaQuery(query: string): boolean {

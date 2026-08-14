@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { prisma, Role } from '../db.js';
+import { prisma, Prisma, Role } from '../db.js';
 import { config } from '../config.js';
 import { atLeast, requireRole } from '../lib/rbac.js';
 import { generateApiKey } from '../lib/apiKey.js';
@@ -16,6 +16,18 @@ type Outcome<T> = Denied | { value: T };
 
 function isDenied<T>(o: Outcome<T>): o is Denied {
   return 'denied' in o;
+}
+
+/**
+ * The anti-lockout invariant: the system must never be left without a
+ * SUPER_ADMIN. Both the demote and the delete path need it, and both must run
+ * it inside their own serializable transaction — otherwise two concurrent
+ * removals each see the other super admin and both succeed. Stating the query
+ * once keeps the two paths from drifting apart.
+ */
+async function hasAnotherSuperAdmin(tx: Prisma.TransactionClient, excludeId: string) {
+  const others = await tx.user.count({ where: { role: Role.SUPER_ADMIN, NOT: { id: excludeId } } });
+  return others > 0;
 }
 
 const createUserSchema = z.object({
@@ -79,13 +91,8 @@ export async function userRoutes(app: FastifyInstance) {
         if (!target) return { denied: { status: 404, message: 'Not found' } };
 
         const losingSuperAdmin = target.role === Role.SUPER_ADMIN && role !== Role.SUPER_ADMIN;
-        if (losingSuperAdmin) {
-          const others = await tx.user.count({
-            where: { role: Role.SUPER_ADMIN, NOT: { id } },
-          });
-          if (others === 0) {
-            return { denied: { status: 400, message: 'Cannot demote the last super admin' } };
-          }
+        if (losingSuperAdmin && !(await hasAnotherSuperAdmin(tx, id))) {
+          return { denied: { status: 400, message: 'Cannot demote the last super admin' } };
         }
 
         const user = await tx.user.update({
@@ -117,11 +124,8 @@ export async function userRoutes(app: FastifyInstance) {
         const target = await tx.user.findUnique({ where: { id }, select: { role: true } });
         if (!target) return { denied: { status: 404, message: 'Not found' } };
 
-        if (target.role === Role.SUPER_ADMIN) {
-          const others = await tx.user.count({ where: { role: Role.SUPER_ADMIN, NOT: { id } } });
-          if (others === 0) {
-            return { denied: { status: 400, message: 'Cannot delete the last super admin' } };
-          }
+        if (target.role === Role.SUPER_ADMIN && !(await hasAnotherSuperAdmin(tx, id))) {
+          return { denied: { status: 400, message: 'Cannot delete the last super admin' } };
         }
 
         // Posts created by this user remain (FK is required). Re-assign to caller.

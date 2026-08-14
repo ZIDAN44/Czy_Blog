@@ -111,14 +111,6 @@ export class SpringValue {
     return this.value;
   }
 
-  get currentVelocity(): number {
-    return this.velocity;
-  }
-
-  get isAnimating(): boolean {
-    return this.running;
-  }
-
   subscribe(fn: (value: number) => void): () => void {
     this.subscribers.add(fn);
     fn(this.value);

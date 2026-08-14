@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, currentUser, type PostStatus } from '@/lib/api';
-import { STATUS_PILL, errMsg } from '@/lib/utils';
+import { STATUS_LABEL, STATUS_PILL, errMsg } from '@/lib/utils';
 
 interface PostSummary {
   id: string;
@@ -14,13 +14,14 @@ interface PostSummary {
 }
 
 // The glow behind each tile is the status colour itself, so it re-tints with
-// the theme instead of staying a pastel that only works on white.
-const STATUS_META: Record<PostStatus, { label: string; glow: string }> = {
-  DRAFT: { label: 'Drafts', glow: 'var(--color-content-tertiary)' },
-  PENDING_REVIEW: { label: 'In review', glow: 'var(--color-warning)' },
-  SCHEDULED: { label: 'Scheduled', glow: 'var(--color-info-content)' },
-  PUBLISHED: { label: 'Published', glow: 'var(--color-success)' },
-  ARCHIVED: { label: 'Archived', glow: 'var(--color-danger)' },
+// the theme instead of staying a pastel that only works on white. The labels
+// come from STATUS_LABEL — this table only adds the colour.
+const STATUS_GLOW: Record<PostStatus, string> = {
+  DRAFT: 'var(--color-content-tertiary)',
+  PENDING_REVIEW: 'var(--color-warning)',
+  SCHEDULED: 'var(--color-info-content)',
+  PUBLISHED: 'var(--color-success)',
+  ARCHIVED: 'var(--color-danger)',
 };
 
 const emptyCounts = (): Record<PostStatus, number> => ({
@@ -84,7 +85,7 @@ export default function Overview() {
           so no label is needed to explain the mapping. */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 stagger">
         {(Object.keys(counts) as PostStatus[]).map((k) => {
-          const meta = STATUS_META[k];
+          const glow = STATUS_GLOW[k];
           const active = filter === k;
           return (
             <button
@@ -101,13 +102,13 @@ export default function Overview() {
               {!active && (
                 <div
                   className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-40 blur-2xl"
-                  style={{ background: meta.glow }}
+                  style={{ background: glow }}
                   aria-hidden
                 />
               )}
               <div className="relative">
                 <div className={`t-label ${active ? 'text-on-inverse opacity-65' : ''}`}>
-                  {meta.label}
+                  {STATUS_LABEL[k]}
                 </div>
                 <div className="mt-2 text-3xl font-semibold tracking-[-0.02em] leading-none">
                   {loading ? <span className="skeleton block h-8 w-10" aria-hidden /> : counts[k]}
@@ -124,7 +125,7 @@ export default function Overview() {
             <h2 className="t-heading">Recent posts</h2>
             {filter && (
               <p className="t-caption mt-0.5">
-                Showing {STATUS_META[filter].label.toLowerCase()} ·{' '}
+                Showing {STATUS_LABEL[filter].toLowerCase()} ·{' '}
                 <button onClick={() => setFilter(null)} className="underline underline-offset-2">
                   show all
                 </button>
@@ -162,7 +163,7 @@ export default function Overview() {
             <div className="px-5 py-14 text-center">
               <p className="t-body text-content-secondary">
                 {filter
-                  ? `Nothing ${STATUS_META[filter].label.toLowerCase()} right now.`
+                  ? `Nothing ${STATUS_LABEL[filter].toLowerCase()} right now.`
                   : 'No posts yet.'}
               </p>
               <Link href="/dashboard/posts/new" className="btn btn-primary mt-4">

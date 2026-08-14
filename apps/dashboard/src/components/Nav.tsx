@@ -1,13 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Logo from '@/components/Logo';
 import { Popover, Sheet } from '@/components/Overlay';
 import ThemeToggle from '@/components/ThemeToggle';
 import { clearSession, currentUser, type SessionUser } from '@/lib/api';
-import { SPRING_SNAPPY, prefersReducedMotion } from '@/lib/motion';
-import { useIsCompact, useScrolled, useSpring } from '@/lib/useMotion';
+import { useIsCompact, useMovingIndicator, useScrolled } from '@/lib/useMotion';
 import { initials } from '@/lib/utils';
 
 interface NavLink {
@@ -169,8 +168,8 @@ function AccountMenu({
 
 /**
  * The active marker is one object that travels between destinations rather
- * than a highlight that teleports. Position and width are separate springs so
- * a short label following a long one does not desynchronise.
+ * than a highlight that teleports — see `useMovingIndicator`, which this
+ * shares with SegmentedControl.
  */
 function NavRail({
   links,
@@ -181,59 +180,11 @@ function NavRail({
   activeHref: string | null;
   className?: string;
 }) {
-  const trackRef = useRef<HTMLElement | null>(null);
-  const items = useRef(new Map<string, HTMLAnchorElement>());
-  const markerRef = useRef<HTMLSpanElement | null>(null);
-  const x = useSpring(0);
-  const width = useSpring(0);
-  const hasSettled = useRef(false);
-
-  const paint = useCallback(() => {
-    const el = markerRef.current;
-    if (!el) return;
-    el.style.transform = `translate3d(${x.current}px, 0, 0)`;
-    el.style.width = `${width.current}px`;
-  }, [x, width]);
-
-  useEffect(() => {
-    const off = [x.subscribe(paint), width.subscribe(paint)];
-    return () => off.forEach((fn) => fn());
-  }, [x, width, paint]);
-
-  const measure = useCallback(
-    (animate: boolean) => {
-      const marker = markerRef.current;
-      const el = activeHref ? items.current.get(activeHref) : null;
-      if (!marker) return;
-      if (!el) {
-        marker.style.opacity = '0';
-        return;
-      }
-      marker.style.opacity = '1';
-      if (!animate || prefersReducedMotion()) {
-        x.set(el.offsetLeft);
-        width.set(el.offsetWidth);
-        paint();
-        return;
-      }
-      x.to(el.offsetLeft, SPRING_SNAPPY);
-      width.to(el.offsetWidth, SPRING_SNAPPY);
-    },
-    [activeHref, x, width, paint],
-  );
-
-  useLayoutEffect(() => {
-    measure(hasSettled.current);
-    hasSettled.current = true;
-  }, [measure]);
-
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track || typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(() => measure(false));
-    observer.observe(track);
-    return () => observer.disconnect();
-  }, [measure]);
+  const {
+    trackRef,
+    indicatorRef: markerRef,
+    setItem,
+  } = useMovingIndicator<string, HTMLElement, HTMLSpanElement>(activeHref);
 
   return (
     <nav ref={trackRef} className={`relative items-center gap-1 flex text-sm ${className}`}>
@@ -248,10 +199,7 @@ function NavRail({
         return (
           <Link
             key={l.href}
-            ref={(el) => {
-              if (el) items.current.set(l.href, el);
-              else items.current.delete(l.href);
-            }}
+            ref={setItem(l.href)}
             href={l.href}
             aria-current={active ? 'page' : undefined}
             className={`relative z-10 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${

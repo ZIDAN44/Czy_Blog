@@ -4,7 +4,7 @@ import { prisma, PostStatus, Role, Prisma } from '../db.js';
 import { toSlug, uniquePostSlug } from '../lib/slug.js';
 import { canEditPost, canManageTaxonomy, coerceStatus } from '../lib/rbac.js';
 import { serializePost } from '../lib/serialize.js';
-import { paginated, paginationSchema, publishedPostWhere } from '../lib/queries.js';
+import { pageArgs, paginated, paginationSchema, publishedPostWhere } from '../lib/queries.js';
 import { httpUrlField, idParam, slugField, slugParam } from '../lib/schemas.js';
 import { blockDocSchema } from '../lib/content.js';
 import { purgePostMedia } from '../lib/mediaCleanup.js';
@@ -121,8 +121,7 @@ export async function publicPostRoutes(app: FastifyInstance) {
         where,
         include: postInclude,
         orderBy: { publishedAt: 'desc' },
-        skip: (q.page - 1) * q.limit,
-        take: q.limit,
+        ...pageArgs(q),
       }),
     ]);
 
@@ -172,8 +171,7 @@ export async function adminPostRoutes(app: FastifyInstance) {
         where,
         include: postInclude,
         orderBy: { updatedAt: 'desc' },
-        skip: (q.page - 1) * q.limit,
-        take: q.limit,
+        ...pageArgs(q),
       }),
     ]);
     return {

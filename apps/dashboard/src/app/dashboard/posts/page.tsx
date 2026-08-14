@@ -5,7 +5,7 @@ import { api, type PostStatus } from '@/lib/api';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 import SegmentedControl, { type Segment } from '@/components/SegmentedControl';
-import { STATUS_PILL, errMsg } from '@/lib/utils';
+import { STATUS_LABEL, STATUS_PILL, errMsg } from '@/lib/utils';
 
 interface Row {
   id: string;
@@ -20,11 +20,7 @@ type Filter = PostStatus | 'ALL';
 
 const SEGMENTS: Segment<Filter>[] = [
   { value: 'ALL', label: 'All' },
-  { value: 'DRAFT', label: 'Drafts' },
-  { value: 'PENDING_REVIEW', label: 'In review' },
-  { value: 'SCHEDULED', label: 'Scheduled' },
-  { value: 'PUBLISHED', label: 'Published' },
-  { value: 'ARCHIVED', label: 'Archived' },
+  ...(Object.keys(STATUS_LABEL) as PostStatus[]).map((s) => ({ value: s, label: STATUS_LABEL[s] })),
 ];
 
 export default function PostsPage() {

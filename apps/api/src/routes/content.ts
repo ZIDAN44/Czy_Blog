@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { prisma } from '../db.js';
+import { prisma, Prisma } from '../db.js';
 import { config } from '../config.js';
-import { paginated, paginationSchema, publishedPostWhere } from '../lib/queries.js';
+import { pageArgs, paginated, paginationSchema, publishedPostWhere } from '../lib/queries.js';
 import { slugParam } from '../lib/schemas.js';
 
 const postSelect = {
@@ -13,14 +13,9 @@ const postSelect = {
   author: { select: { name: true } },
 } as const;
 
-type ContentPost = {
-  slug: string;
-  title: string;
-  excerpt: string | null;
-  coverImageUrl: string | null;
-  publishedAt: Date | null;
-  author: { name: string };
-};
+// Derived from the select above rather than restated: a field added to one
+// and forgotten in the other is a compile error instead of a silent mismatch.
+type ContentPost = Prisma.PostGetPayload<{ select: typeof postSelect }>;
 
 function serializeContentPost(p: ContentPost) {
   return {
@@ -46,8 +41,7 @@ export async function contentRoutes(app: FastifyInstance) {
         where,
         select: postSelect,
         orderBy: { publishedAt: 'desc' },
-        skip: (q.page - 1) * q.limit,
-        take: q.limit,
+        ...pageArgs(q),
       }),
     ]);
 

@@ -23,3 +23,9 @@ export function paginationSchema(opts: { maxLimit: number; defaultLimit: number 
 export function paginated(total: number, page: number, limit: number) {
   return { page, limit, total, pages: Math.ceil(total / limit) };
 }
+
+// The offset maths belongs next to the schema that produced `page`/`limit`, so
+// the 1-based page contract is stated once rather than in every handler.
+export function pageArgs(q: { page: number; limit: number }): { skip: number; take: number } {
+  return { skip: (q.page - 1) * q.limit, take: q.limit };
+}
