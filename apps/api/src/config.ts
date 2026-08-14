@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env.js';
 
 function required(name: string): string {
   const v = process.env[name];
@@ -46,8 +46,12 @@ function parseTrustProxy(raw: string | undefined): boolean | string | number {
 }
 
 export const config = {
-  port: Number(process.env.PORT ?? 4000),
-  host: process.env.HOST ?? '0.0.0.0',
+  // `API_PORT`/`API_HOST` are the names used in the shared root `.env`; a bare
+  // `PORT`/`HOST` would collide with the dashboard, which reads those too.
+  // The unprefixed pair is still honoured as a fallback for platforms (Heroku,
+  // Fly, the container image) that inject `PORT` on their own.
+  port: Number(process.env.API_PORT ?? process.env.PORT ?? 4000),
+  host: process.env.API_HOST ?? process.env.HOST ?? '0.0.0.0',
   isProd,
   jwtSecret,
   jwtIssuer: process.env.JWT_ISSUER ?? 'czy-blog',

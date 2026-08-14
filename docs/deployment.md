@@ -34,7 +34,6 @@ POSTGRES_PASSWORD=CHANGE-ME
 POSTGRES_DB=czyblog
 POSTGRES_PORT=5432
 
-DATABASE_URL=postgresql://czyblog:CHANGE-ME@postgres:5432/czyblog?schema=public
 JWT_SECRET=CHANGE-ME-32+chars
 API_PORT=4000
 CORS_ORIGINS=https://blog.example.com
@@ -43,15 +42,19 @@ PUBLIC_SITE_URL=https://blog.example.com
 PUBLIC_UPLOAD_BASE_URL=https://blog.example.com/uploads
 MEDIA_CLEANUP_INTERVAL_HOURS=24
 
-API_URL=http://api:4000
 DASHBOARD_PORT=3000
 ```
 
 Notes: `JWT_SECRET` must be ≥32 chars and not the example (else the API won't
 boot). `CORS_ORIGINS` must list real origins — `*` fails to boot in production.
-`DATABASE_URL` host is `postgres` (the service name). Keep
-`API_URL=http://api:4000`. Set `TRUST_PROXY` once a reverse proxy is in front
-(see [step 5](#5-access)).
+Set `TRUST_PROXY` once a reverse proxy is in front (see [step 5](#5-access)).
+
+Leave `DATABASE_URL` and `API_URL` at their shipped localhost values: Compose
+overrides both with the internal service hosts (`postgres`, `api`), so the same
+`.env` also works when you run the apps directly on a machine. To use an
+external database instead, set `DATABASE_URL` here **and** delete the
+`DATABASE_URL` line from the `api` service's `environment:` block in
+`docker-compose.yml`, which otherwise takes precedence.
 
 ## 3. Start
 

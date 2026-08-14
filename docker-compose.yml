@@ -28,8 +28,13 @@ services:
       postgres:
         condition: service_healthy
     env_file: .env
+    environment:
+      # `environment` wins over `env_file`: reach Postgres over the compose
+      # network instead of the host `localhost` the .env is written for.
+      # Using an external database? Delete this key and set DATABASE_URL in .env.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-czyblog}:${POSTGRES_PASSWORD:-czyblog}@postgres:5432/${POSTGRES_DB:-czyblog}?schema=public
     ports:
-      - "${API_PORT:-4000}:4000"
+      - "${API_PORT:-4000}:${API_PORT:-4000}"
     volumes:
       - czyblog_uploads:/app/apps/api/uploads
 
@@ -40,6 +45,10 @@ services:
     depends_on:
       - api
     env_file: .env
+    environment:
+      # Same idea: the dashboard's server-side proxy talks to the API service
+      # over the compose network, not the host loopback.
+      API_URL: http://api:${API_PORT:-4000}
     ports:
       - "${DASHBOARD_PORT:-3000}:3000"
 

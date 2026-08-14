@@ -1,6 +1,12 @@
-import 'dotenv/config';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { config as loadDotenv } from 'dotenv';
 import { defineConfig } from 'prisma/config';
+
+loadDotenv({
+  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.env'),
+  quiet: true,
+});
 
 // Prisma 7 moves environment-bound config out of schema.prisma into here.
 // The CLI uses `datasource.url` for `prisma migrate`, `prisma generate`, etc.

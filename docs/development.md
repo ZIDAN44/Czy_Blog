@@ -32,22 +32,13 @@ npm run db:up      # docker compose up -d postgres → localhost:5432
 
 Stop later with `npm run db:down`.
 
-## 3. API env
+## 3. Env
 
-Create `apps/api/.env`:
-
-```dotenv
-DATABASE_URL=postgresql://czyblog:czyblog@localhost:5432/czyblog?schema=public
-JWT_SECRET=dev-secret
-CORS_ORIGINS=http://localhost:3000
-PUBLIC_SITE_URL=http://localhost:3000
-PUBLIC_UPLOAD_BASE_URL=http://localhost:4000/uploads
+```bash
+cp .env.example .env
 ```
 
-Host is `localhost` (not `postgres`) since the app runs on your machine. In dev,
-`JWT_SECRET` is optional (a fallback is used); the ≥32-char rule applies only in
-production. Full list: [environment](environment.md). The dashboard defaults
-`API_URL` to `http://localhost:4000`, so it needs no env.
+Full list: [environment](environment.md).
 
 ## 4. Migrate
 

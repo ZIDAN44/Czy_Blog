@@ -1,8 +1,25 @@
 # Environment Variables
 
-Docker Compose reads one `.env` file (see
-[`.env.example`](../.env.example)). Local dev: the API reads
-`apps/api/.env`; the dashboard reads `API_URL`.
+There is exactly one env file: `.env` at the repo root (copy
+[`.env.example`](../.env.example)). The apps have none of their own.
+
+Four consumers read it:
+
+| Consumer       | How                                                                        |
+| -------------- | -------------------------------------------------------------------------- |
+| Docker Compose | `env_file: .env` on the `api` and `dashboard` services.                    |
+| API            | [`apps/api/src/env.ts`](../apps/api/src/env.ts) loads it by absolute path. |
+| Prisma CLI     | [`apps/api/prisma.config.ts`](../apps/api/prisma.config.ts), same path.    |
+| Dashboard      | [`apps/dashboard/next.config.mjs`](../apps/dashboard/next.config.mjs).     |
+
+Resolution is by absolute path, not `process.cwd()`, so it works from the repo
+root and from inside `apps/*`. A variable already present in the real
+environment always wins — dotenv never overwrites — which is why Compose's
+`environment:` and the container images' own `ENV` defaults still take effect.
+
+The file holds localhost values so the apps run directly on your machine. The
+only two settings that must differ on the Docker network — the database host and
+`API_URL` — are overridden per service in `docker-compose.yml`.
 
 ## Postgres (Compose only)
 
@@ -21,13 +38,13 @@ Read in [config.ts](../apps/api/src/config.ts).
 
 | Variable                       | Required  | Default                         | Purpose                                                                                  |
 | ------------------------------ | --------- | ------------------------------- | ---------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                 | Yes       | —                               | Postgres connection string.                                                              |
+| `DATABASE_URL`                 | Yes       | —                               | Postgres connection string. Compose overrides the host with the `postgres` service.      |
 | `JWT_SECRET`                   | Prod only | dev fallback                    | Signs JWTs. In production must be set, ≥32 chars, not the dev default — else boot fails. |
 | `JWT_ISSUER`                   | No        | `czy-blog`                      | `iss` claim; rejected on verify if it differs.                                           |
 | `JWT_AUDIENCE`                 | No        | `czy-blog-api`                  | `aud` claim; rejected on verify if it differs.                                           |
 | `BCRYPT_ROUNDS`                | No        | `12`                            | Password hash work factor.                                                               |
-| `PORT`                         | No        | `4000`                          | Listen port.                                                                             |
-| `HOST`                         | No        | `0.0.0.0`                       | Bind address.                                                                            |
+| `API_PORT`                     | No        | `4000`                          | Listen port, and the host port Compose publishes. Falls back to `PORT`.                  |
+| `API_HOST`                     | No        | `0.0.0.0`                       | Bind address. Falls back to `HOST`.                                                      |
 | `CORS_ORIGINS`                 | No        | `http://localhost:3000`         | Comma-separated origins. `*` is refused in production — boot fails.                      |
 | `TRUST_PROXY`                  | No        | `false`                         | See below. `false` \| `true` \| hop count \| ip/cidr list.                               |
 | `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`         | Base for post links in RSS / content API.                                                |
@@ -39,6 +56,10 @@ Read in [config.ts](../apps/api/src/config.ts).
 
 Generate a secret: `openssl rand -base64 48`.
 
+`API_PORT`/`API_HOST` carry the prefix because a bare `PORT`/`HOST` in a shared
+file would also be picked up by the dashboard's Next.js server. The unprefixed
+pair is still read as a fallback, for platforms that inject `PORT` themselves.
+
 ### `TRUST_PROXY`
 
 Decides where the API reads the client IP from, which is what rate limiting
@@ -49,10 +70,10 @@ proxy's address or CIDR (`TRUST_PROXY=10.0.0.0/8`) rather than `true`.
 
 ## Dashboard — `apps/dashboard`
 
-| Variable         | Default                 | Purpose                                                                        |
-| ---------------- | ----------------------- | ------------------------------------------------------------------------------ |
-| `API_URL`        | `http://localhost:4000` | Where the proxy forwards. Read at request time. In Compose: `http://api:4000`. |
-| `DASHBOARD_PORT` | `3000`                  | Host port (Compose).                                                           |
+| Variable         | Default                 | Purpose                                                                                      |
+| ---------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
+| `API_URL`        | `http://localhost:4000` | Where the proxy forwards. Read at request time. Compose overrides it with `http://api:4000`. |
+| `DASHBOARD_PORT` | `3000`                  | Host port published by Compose. Local dev is fixed at 3000 by the `dev`/`start` scripts.     |
 
 Browser→dashboard calls are same-origin (`/api-proxy/...`); dashboard→API uses
 `API_URL` over the internal network. The API needs a published port only if
@@ -65,12 +86,14 @@ POSTGRES_USER=czyblog
 POSTGRES_PASSWORD=<strong-password>
 POSTGRES_DB=czyblog
 
-DATABASE_URL=postgresql://czyblog:<strong-password>@postgres:5432/czyblog?schema=public
 JWT_SECRET=<openssl rand -base64 48>
 CORS_ORIGINS=https://blog.example.com
 TRUST_PROXY=<proxy ip/cidr, if any>
 PUBLIC_SITE_URL=https://blog.example.com
 PUBLIC_UPLOAD_BASE_URL=https://blog.example.com/uploads
-
-API_URL=http://api:4000
 ```
+
+`DATABASE_URL` and `API_URL` are omitted on purpose: under Compose they come
+from the `environment:` blocks in `docker-compose.yml`, built from the
+`POSTGRES_*` values above. Set `DATABASE_URL` here only for an external
+database, and remove the override from the `api` service when you do.
