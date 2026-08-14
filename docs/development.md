@@ -10,7 +10,7 @@ Postgres. For a deployed stack, see [deployment](deployment.md).
 
 Layout:
 
-```
+```text
 apps/api         Fastify + Prisma  (:4000)
 apps/dashboard   Next.js           (:3000)
 package.json     root scripts orchestrate both
@@ -97,6 +97,8 @@ Or use the dashboard sign-up screen, then log in at `/login`.
 | `apps/api/src/routes/`           | Route handlers.                             |
 | `apps/api/src/plugins/auth.ts`   | JWT + API-key auth.                         |
 | `apps/api/src/lib/rbac.ts`       | Roles and permissions.                      |
+| `apps/api/src/lib/schemas.ts`    | Shared field validators (id, slug, url).    |
+| `apps/api/src/lib/content.ts`    | Post-document validation.                   |
 | `apps/api/src/scheduler.ts`      | Publish + media-cleanup jobs.               |
 | `apps/api/prisma/schema.prisma`  | Schema and migrations.                      |
 | `apps/dashboard/src/app/`        | Next.js routes.                             |

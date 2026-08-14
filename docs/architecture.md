@@ -70,7 +70,7 @@ sequenceDiagram
     B->>N: PATCH /api-proxy/.../posts/:id (Bearer JWT)
     N->>A: forwarded
     A->>A: verify JWT
-    A->>D: reload user role
+    A->>D: reload user role + token version
     A->>A: RBAC check
     A->>D: update post
     A-->>N: 200 { data }
@@ -78,8 +78,15 @@ sequenceDiagram
 ```
 
 On every authenticated request the API reloads the user's role from the database
-rather than trusting the JWT, so demotions and deletions apply immediately. See
+rather than trusting the JWT, so demotions and deletions apply immediately. The
+same lookup compares the token's `tv` claim against the user's `tokenVersion`,
+which a password change increments — so older tokens stop working then too. See
 [auth.ts](../apps/api/src/plugins/auth.ts).
+
+Writes that span more than one statement (replacing a post's tags, deleting a
+user, the last-super-admin checks, first-run bootstrap) run in a transaction, the
+last three at `Serializable`, so a concurrent request cannot slip between the
+check and the write.
 
 ## Data model
 
@@ -108,7 +115,10 @@ erDiagram
     }
 ```
 
-- Post content is JSONB — a Tiptap document (`{ type: "doc", content: [...] }`).
+- Post content is JSONB — a Tiptap document (`{ type: "doc", content: [...] }`),
+  validated against the editor's node types and size limits before it is stored
+  ([content.ts](../apps/api/src/lib/content.ts)).
+- `User.tokenVersion` increments on password change; JWTs carry it as `tv`.
 - Soft deletes set `deletedAt` and `ARCHIVED`; queries filter `deletedAt: null`.
 - Deleting a user reassigns their posts/media to the acting super admin (author FK
   is required).
@@ -122,8 +132,27 @@ Two credential types:
 | JWT (7-day)       | Dashboard users    | `Authorization: Bearer <jwt>` | `authenticate` |
 | API key (`czk_…`) | Headless consumers | `x-api-key: <key>`            | `apiKeyAuth`   |
 
-API keys are shown once; only a SHA-256 hash and 12-char prefix are stored
-([apiKey.ts](../apps/api/src/lib/apiKey.ts)).
+JWTs are HS256 with a pinned issuer and audience. Passwords are bcrypt at
+`BCRYPT_ROUNDS`. API keys are shown once; only a SHA-256 hash and 12-char prefix
+are stored ([apiKey.ts](../apps/api/src/lib/apiKey.ts)).
+
+## Request hardening
+
+Applied in [app.ts](../apps/api/src/app.ts):
+
+| Concern      | Handling                                                                      |
+| ------------ | ----------------------------------------------------------------------------- |
+| Headers      | `@fastify/helmet`; `/uploads` also gets `nosniff` and a sandbox CSP.          |
+| CORS         | Explicit origin list. `*` refused in production, credentials off with it.     |
+| Rate limit   | 300/min per IP; 10/min on credential routes, 30/min on upload.                |
+| Client IP    | From `TRUST_PROXY` only — off by default, so headers cannot be forged.        |
+| Request body | 1 MiB JSON; uploads capped by `MAX_UPLOAD_BYTES`.                             |
+| Errors       | Zod → `400`, known Prisma codes → `409`/`404`, everything else → plain `500`. |
+| Logs         | `authorization`, `cookie`, `x-api-key` redacted.                              |
+
+The error and not-found handlers are installed before the route plugins, since a
+Fastify child context inherits whichever handler its parent had when it was
+created.
 
 ## Roles (RBAC)
 
@@ -171,8 +200,8 @@ Both run inside the API process ([scheduler.ts](../apps/api/src/scheduler.ts)):
 
 ## Stack
 
-- API: Fastify 5, Prisma 7 (`@prisma/adapter-pg`), Zod, `@fastify/jwt`,
-  `@fastify/multipart` (10 MB), `@fastify/rate-limit` (300/min),
-  `@fastify/static`, bcryptjs.
+- API: Fastify 5, Prisma 7 (`@prisma/adapter-pg`), Zod 4, `@fastify/jwt`,
+  `@fastify/helmet`, `@fastify/multipart` (10 MB), `@fastify/rate-limit`
+  (300/min), `@fastify/static`, bcryptjs.
 - Dashboard: Next.js 16 (standalone), React 19, Tiptap 3, Tailwind 4, `marked`.
 - Database: Postgres 18.

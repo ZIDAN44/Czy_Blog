@@ -20,8 +20,8 @@ Named volumes: `czyblog_pgdata` (database), `czyblog_uploads` (media).
 
 ```bash
 mkdir czy-blog && cd czy-blog
-curl -sSL -o docker-compose.yml https://raw.githubusercontent.com/ZIDAN44/Czy_Blog/main/docker-compose.yml
-curl -sSL -o .env https://raw.githubusercontent.com/ZIDAN44/Czy_Blog/main/.env.docker.example
+curl -sSL -o compose.yml https://raw.githubusercontent.com/ZIDAN44/Czy_Blog/main/docker-compose.yml
+curl -sSL -o .env https://raw.githubusercontent.com/ZIDAN44/Czy_Blog/main/.env.example
 ```
 
 ## 2. Edit `.env`
@@ -38,6 +38,7 @@ DATABASE_URL=postgresql://czyblog:CHANGE-ME@postgres:5432/czyblog?schema=public
 JWT_SECRET=CHANGE-ME-32+chars
 API_PORT=4000
 CORS_ORIGINS=https://blog.example.com
+TRUST_PROXY=false
 PUBLIC_SITE_URL=https://blog.example.com
 PUBLIC_UPLOAD_BASE_URL=https://blog.example.com/uploads
 MEDIA_CLEANUP_INTERVAL_HOURS=24
@@ -47,8 +48,10 @@ DASHBOARD_PORT=3000
 ```
 
 Notes: `JWT_SECRET` must be ≥32 chars and not the example (else the API won't
-boot). `DATABASE_URL` host is `postgres` (the service name). Keep
-`API_URL=http://api:4000`.
+boot). `CORS_ORIGINS` must list real origins — `*` fails to boot in production.
+`DATABASE_URL` host is `postgres` (the service name). Keep
+`API_URL=http://api:4000`. Set `TRUST_PROXY` once a reverse proxy is in front
+(see [step 5](#5-access)).
 
 ## 3. Start
 
@@ -81,7 +84,12 @@ Afterwards, add users from the dashboard (Users).
 
 For a real domain, put a reverse proxy with TLS in front of port 3000. The API
 usually need not be public — expose 4000 only for headless
-[content API](api.md#content-api-headless) clients.
+[content API](api.md#content-api-headless--apiv1content) clients.
+
+If the API is reached through that proxy, set
+[`TRUST_PROXY`](environment.md#trust_proxy) to the proxy's address or CIDR;
+otherwise rate limiting counts every request as coming from the proxy. Leave it
+`false` while the API is only reachable inside the Compose network.
 
 ## Operations
 
@@ -105,10 +113,13 @@ Upgrades: migrations are idempotent, so `docker compose pull && docker compose u
 
 ## Troubleshooting
 
-| Symptom                            | Fix                                                                  |
-| ---------------------------------- | -------------------------------------------------------------------- |
-| API exits on a `JWT_SECRET` error  | Set it, ≥32 chars, not the example value.                            |
-| "Missing env: DATABASE_URL"        | Set `DATABASE_URL` in `.env`.                                        |
-| Dashboard loads, API calls fail    | `API_URL` must be `http://api:4000`.                                 |
-| CORS errors from a headless client | Add its origin to `CORS_ORIGINS`.                                    |
-| Uploaded images 404                | `PUBLIC_UPLOAD_BASE_URL` must resolve to where `/uploads` is served. |
+| Symptom                             | Fix                                                                  |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| API exits on a `JWT_SECRET` error   | Set it, ≥32 chars, not the example value.                            |
+| API exits on a `CORS_ORIGINS` error | Replace `*` with the real origins.                                   |
+| "Missing env: DATABASE_URL"         | Set `DATABASE_URL` in `.env`.                                        |
+| Everyone rate limited at once       | Set `TRUST_PROXY` to your proxy's address.                           |
+| Upload rejected with `415`          | Only JPEG, PNG, WebP, GIF, AVIF; the bytes must match the format.    |
+| Dashboard loads, API calls fail     | `API_URL` must be `http://api:4000`.                                 |
+| CORS errors from a headless client  | Add its origin to `CORS_ORIGINS`.                                    |
+| Uploaded images 404                 | `PUBLIC_UPLOAD_BASE_URL` must resolve to where `/uploads` is served. |

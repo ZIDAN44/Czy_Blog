@@ -9,11 +9,11 @@ Self-hosted blog platform.
 
 ## Index
 
-| Doc                                     | Contents                                       |
-| --------------------------------------- | ---------------------------------------------- |
-| [Introduction](introduction.md)         | What it is, feature list, limitations          |
-| [Architecture](architecture.md)         | Diagrams, request flow, data model, auth, jobs |
-| [API reference](api.md)                 | Every endpoint, auth, role gate                |
-| [Environment variables](environment.md) | All env vars and defaults                      |
-| [Production deployment](deployment.md)  | Docker Compose                                 |
-| [Development setup](development.md)     | Local Node.js workflow                         |
+| Doc                                     | Contents                                                  |
+| --------------------------------------- | --------------------------------------------------------- |
+| [Introduction](introduction.md)         | What it is, feature list, limitations                     |
+| [Architecture](architecture.md)         | Diagrams, request flow, data model, auth, hardening, jobs |
+| [API reference](api.md)                 | Every endpoint, auth, role gate                           |
+| [Environment variables](environment.md) | All env vars and defaults                                 |
+| [Production deployment](deployment.md)  | Docker Compose                                            |
+| [Development setup](development.md)     | Local Node.js workflow                                    |

@@ -12,7 +12,13 @@ Conventions:
 - Lists return `{ data: [...], pagination: { page, limit, total, pages } }`.
 - Single objects return `{ data: {...} }`.
 - Validation errors return `400 { error: "ValidationError", issues }`.
-- Rate limit: 300 req/min per IP (localhost exempt).
+- Other errors return `{ error: "message" }`. `5xx` bodies are always
+  `Internal Server Error`; the detail goes to the server log.
+- `page` ≤ 10000. Ids must be cuids and slugs `[a-z0-9-]`, else `400`.
+- Rate limit: 300 req/min per IP. Credential endpoints (`/auth/login`,
+  `/auth/bootstrap`, `/auth/change-password`) 10/min; `/media/upload` 30/min.
+  Set [`TRUST_PROXY`](environment.md#trust_proxy) if the API is behind a proxy,
+  or every client shares one bucket.
 
 ## Health
 
@@ -28,18 +34,23 @@ Conventions:
 | POST   | `/auth/bootstrap`        | Public | First run only: create initial super admin. `409` if done. |
 | POST   | `/auth/login`            | Public | Email + password → JWT + user.                             |
 | GET    | `/auth/me`               | JWT    | Current user profile.                                      |
-| POST   | `/auth/change-password`  | JWT    | `currentPassword`, `newPassword`.                          |
+| POST   | `/auth/change-password`  | JWT    | `currentPassword`, `newPassword` (must differ).            |
 
-Login/bootstrap return `{ token, user: { id, email, name, role } }`.
+Login, bootstrap and change-password return
+`{ token, user: { id, email, name, role } }`. A password change invalidates every
+token issued before it, so the caller must store the new one — older tokens get
+`401 { error: "Session is no longer valid" }`.
+
+Passwords are 8–72 characters (bcrypt reads at most 72 bytes).
 
 ## Posts — public — `/api/v1/posts`
 
 Only published, non-deleted posts.
 
-| Method | Path           | Auth   | Purpose                                                     |
-| ------ | -------------- | ------ | ----------------------------------------------------------- |
-| GET    | `/posts`       | Public | List. Query: `page`, `limit` (≤50), `tag`, `category`, `q`. |
-| GET    | `/posts/:slug` | Public | One post by slug; increments view count.                    |
+| Method | Path           | Auth   | Purpose                                                                  |
+| ------ | -------------- | ------ | ------------------------------------------------------------------------ |
+| GET    | `/posts`       | Public | List. Query: `page`, `limit` (≤50), `tag`, `category`, `q` (≤100 chars). |
+| GET    | `/posts/:slug` | Public | One post by slug; increments view count.                                 |
 
 ## Posts — admin — `/api/v1/admin/posts`
 
@@ -60,9 +71,9 @@ Body (all optional on PATCH):
   "title": "string (1-200)",
   "excerpt": "string (<=500)",
   "content": { "type": "doc", "content": [] },
-  "coverImageUrl": "https://...",
+  "coverImageUrl": "https://... (http/https only)",
   "categorySlug": "string",
-  "tagSlugs": ["string"],
+  "tagSlugs": ["string (max 25)"],
   "status": "DRAFT | PENDING_REVIEW | SCHEDULED | PUBLISHED | ARCHIVED",
   "scheduledFor": "ISO-8601 (future, required for SCHEDULED)"
 }
@@ -71,6 +82,13 @@ Body (all optional on PATCH):
 Rules: `SCHEDULED` needs a future `scheduledFor`; contributor publish/schedule
 downgrades to `PENDING_REVIEW`; only editors+ create new categories/tags via slugs.
 
+`content` is checked against the node and mark types the editor uses (`paragraph`,
+`heading`, `bulletList`, `orderedList`, `listItem`, `blockquote`, `codeBlock`,
+`horizontalRule`, `hardBreak`, `image`, `text`; marks `bold`, `italic`, `strike`,
+`code`, `link`). Unknown types are rejected. Limits: 30 levels deep, 10000 nodes,
+50000 chars per text node. `href`/`src` attributes must be relative or `http`,
+`https`, `mailto` — `javascript:` and `data:` are rejected.
+
 ## Taxonomy — `/api/v1`
 
 | Method | Path                    | Auth   | Role   | Purpose                          |
@@ -78,7 +96,9 @@ downgrades to `PENDING_REVIEW`; only editors+ create new categories/tags via slu
 | GET    | `/categories`           | Public | —      | List categories.                 |
 | GET    | `/tags`                 | Public | —      | List tags.                       |
 | POST   | `/admin/categories`     | JWT    | Editor | Create (`name`, `description?`). |
-| DELETE | `/admin/categories/:id` | JWT    | Editor | Delete.                          |
+| DELETE | `/admin/categories/:id` | JWT    | Editor | Delete; detaches it from posts.  |
+
+Creating a category whose slug exists returns `409`.
 
 ## Media — `/api/v1/media`
 
@@ -87,10 +107,16 @@ All JWT.
 | Method | Path            | Purpose                                                                  |
 | ------ | --------------- | ------------------------------------------------------------------------ |
 | POST   | `/media/upload` | Multipart image upload → `{ id, url, mime_type, size_bytes, filename }`. |
-| GET    | `/media`        | List caller's uploads (latest 100).                                      |
+| GET    | `/media`        | List caller's uploads. Query: `page`, `limit` (≤100).                    |
 
-Allowed: JPEG, PNG, WebP, GIF, SVG, AVIF. Max 10 MB. Served at `/uploads/<name>`;
-`url` built from `PUBLIC_UPLOAD_BASE_URL`.
+Allowed: JPEG, PNG, WebP, GIF, AVIF. The type is read from the file's own bytes,
+not from the sent `Content-Type` or the filename, and the stored name and
+extension come from that — anything else is `415`. SVG is not accepted (it can
+carry script). Over `MAX_UPLOAD_BYTES` is `413`.
+
+Served at `/uploads/<name>` with `X-Content-Type-Options: nosniff` and a sandbox
+CSP; `url` is built from `PUBLIC_UPLOAD_BASE_URL`. The original filename is kept
+for display only.
 
 ## Users — `/api/v1/users`
 
@@ -110,6 +136,8 @@ API keys — `/api/v1/users/me/api-keys`:
 | GET    | `/users/me/api-keys`     | Contributor | List your keys (metadata only).       |
 | POST   | `/users/me/api-keys`     | Author      | Create; returns plaintext `key` once. |
 | DELETE | `/users/me/api-keys/:id` | Contributor | Revoke.                               |
+
+Max 20 active keys per user; past that, create returns `409`.
 
 ## Content API (headless) — `/api/v1/content`
 

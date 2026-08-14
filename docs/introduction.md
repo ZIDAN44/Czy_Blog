@@ -22,7 +22,7 @@ flowchart LR
 
 ## Features
 
-**Writing**
+### Writing
 
 - Tiptap block editor: headings, lists, links, images, syntax-highlighted code.
   Content is stored as a JSON document, not HTML.
@@ -30,7 +30,7 @@ flowchart LR
 - Local draft recovery: unsaved edits are saved to `localStorage` and offered back
   if newer than the server copy. Nothing hits the server until you save.
 
-**Publishing**
+### Publishing
 
 - Statuses: Draft, Pending review, Scheduled, Published, Archived.
 - Scheduled publishing: a job runs every minute and publishes posts whose time has
@@ -38,22 +38,23 @@ flowchart LR
 - Review step: contributors submit for review; an editor or admin publishes.
 - Soft delete: archives the post and reclaims its media instead of deleting the row.
 
-**Roles**
+### Roles
 
 - Four roles, ranked: Super admin > Editor > Author > Contributor
   ([permissions](architecture.md#roles-rbac)).
 - First account created becomes super admin; afterwards only a super admin adds
   users.
 - Each request reloads the role from the database, so demotions apply immediately.
-- Self-service password change.
+- Self-service password change; it signs out sessions started before the change.
 
-**Media**
+### Media
 
-- Image uploads (JPEG, PNG, WebP, GIF, SVG, AVIF), up to 10 MB.
+- Image uploads (JPEG, PNG, WebP, GIF, AVIF), up to 10 MB. The format is read
+  from the file's bytes, so a mislabelled file is rejected.
 - Stored on disk, served from `/uploads`; public base URL is configurable.
 - Scheduled cleanup removes uploads no post references.
 
-**Reading and distribution**
+### Reading and distribution
 
 - Public reader with post list and post pages.
 - Search and filter published posts by text, tag, or category.
@@ -61,10 +62,10 @@ flowchart LR
 - RSS feed at `/rss.xml` (25 latest).
 - Content API: other sites read published posts as JSON with an `x-api-key`.
 
-**Operational**
+### Operational
 
 - JWT sessions for users; hashed API keys for headless consumers.
-- Rate limit: 300 requests/minute per IP.
+- Rate limit: 300 requests/minute per IP, 10/minute on login and password change.
 - Migrations run automatically on API startup.
 - Docker images for both apps, run via Docker Compose.
 
