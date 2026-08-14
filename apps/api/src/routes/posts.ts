@@ -5,7 +5,8 @@ import { toSlug, uniquePostSlug } from '../lib/slug.js';
 import { canEditPost, canManageTaxonomy, coerceStatus } from '../lib/rbac.js';
 import { serializePost } from '../lib/serialize.js';
 import { paginated, paginationSchema, publishedPostWhere } from '../lib/queries.js';
-import { idParam, slugParam } from '../lib/schemas.js';
+import { httpUrlField, idParam, slugField, slugParam } from '../lib/schemas.js';
+import { blockDocSchema } from '../lib/content.js';
 import { purgePostMedia } from '../lib/mediaCleanup.js';
 
 const postInclude = {
@@ -14,15 +15,21 @@ const postInclude = {
   tags: { include: { tag: true } },
 } as const;
 
-const blockDocSchema = z.object({ type: z.literal('doc'), content: z.array(z.any()) });
+// A post can carry a lot of tags before it stops being a taxonomy and starts
+// being a write-amplification vector: each one is a row plus a possible insert.
+const MAX_TAGS_PER_POST = 25;
+
+// Free-text search runs as an unanchored LIKE across two columns. Cap the
+// needle so a caller cannot make every row comparison arbitrarily expensive.
+const MAX_SEARCH_LENGTH = 100;
 
 const createSchema = z.object({
-  title: z.string().min(1).max(200),
+  title: z.string().trim().min(1).max(200),
   excerpt: z.string().max(500).optional(),
   content: blockDocSchema,
-  coverImageUrl: z.string().url().optional(),
-  categorySlug: z.string().optional(),
-  tagSlugs: z.array(z.string()).optional(),
+  coverImageUrl: httpUrlField.optional(),
+  categorySlug: z.string().trim().min(1).max(96).optional(),
+  tagSlugs: z.array(z.string().trim().min(1).max(96)).max(MAX_TAGS_PER_POST).optional(),
   status: z.enum(PostStatus).optional(),
   scheduledFor: z.iso.datetime().optional(),
 });
@@ -31,6 +38,12 @@ const updateSchema = createSchema.partial();
 
 function isFutureDate(d: Date | null | undefined): d is Date {
   return !!d && d.getTime() > Date.now();
+}
+
+// The document has already been structurally validated by `blockDocSchema`;
+// this only restates that for Prisma's JSON column type.
+function asJson(doc: unknown): Prisma.InputJsonValue {
+  return doc as Prisma.InputJsonValue;
 }
 
 // Resolve a category by slug. Only EDITOR+ may implicitly create one — for
@@ -47,22 +60,38 @@ async function resolveCategoryId(input: string, role: Role): Promise<string | nu
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/\b\w/g, (c) => c.toUpperCase()) || slug;
-  const cat = await prisma.category.create({ data: { slug, name } });
+  // Two concurrent creates of the same slug would make one of them fail the
+  // unique constraint; upsert collapses that race into a single winner.
+  const cat = await prisma.category.upsert({
+    where: { slug },
+    update: {},
+    create: { slug, name },
+  });
   return cat.id;
 }
 
-async function resolveTagIds(slugs: string[], role: Role): Promise<string[]> {
+async function resolveTagIds(rawSlugs: string[], role: Role): Promise<string[]> {
+  // Normalise first: the slug column is the identity of a tag, so `My Tag`,
+  // `my-tag` and `MY-TAG` must not become three rows.
+  const slugs = [...new Set(rawSlugs.map(toSlug).filter(Boolean))].slice(0, MAX_TAGS_PER_POST);
   if (!slugs.length) return [];
-  const existing = await prisma.tag.findMany({ where: { slug: { in: slugs } } });
+
   if (canManageTaxonomy(role)) {
-    const existingSlugs = new Set(existing.map((t) => t.slug));
-    const toCreate = slugs.filter((s) => !existingSlugs.has(s));
-    const created = await Promise.all(
-      toCreate.map((slug) => prisma.tag.create({ data: { slug, name: slug } })),
-    );
-    return [...existing, ...created].map((t) => t.id);
+    // Race-safe: concurrent requests that both try to create the same tag get
+    // one row, and the loser skips instead of throwing a unique violation.
+    await prisma.tag.createMany({
+      data: slugs.map((slug) => ({ slug, name: slug })),
+      skipDuplicates: true,
+    });
+    const all = await prisma.tag.findMany({ where: { slug: { in: slugs } }, select: { id: true } });
+    return all.map((t) => t.id);
   }
+
   // Lower roles: only attach tags that already exist; ignore unknown slugs.
+  const existing = await prisma.tag.findMany({
+    where: { slug: { in: slugs } },
+    select: { id: true },
+  });
   return existing.map((t) => t.id);
 }
 
@@ -71,9 +100,9 @@ export async function publicPostRoutes(app: FastifyInstance) {
   app.get('/', async (req, reply) => {
     const q = paginationSchema({ maxLimit: 50, defaultLimit: 10 })
       .extend({
-        tag: z.string().optional(),
-        category: z.string().optional(),
-        q: z.string().optional(),
+        tag: slugField.optional(),
+        category: slugField.optional(),
+        q: z.string().trim().min(1).max(MAX_SEARCH_LENGTH).optional(),
       })
       .parse(req.query);
 
@@ -113,7 +142,7 @@ export async function publicPostRoutes(app: FastifyInstance) {
     // Fire-and-forget view count
     prisma.post
       .update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } })
-      .catch(() => {});
+      .catch((err) => req.log.warn({ err }, 'failed to increment view count'));
     return reply.send({ data: serializePost(post) });
   });
 }
@@ -126,7 +155,7 @@ export async function adminPostRoutes(app: FastifyInstance) {
     const q = paginationSchema({ maxLimit: 100, defaultLimit: 20 })
       .extend({
         status: z.enum(PostStatus).optional(),
-        mine: z.coerce.boolean().optional(),
+        mine: z.stringbool().optional(),
       })
       .parse(req.query);
 
@@ -192,7 +221,7 @@ export async function adminPostRoutes(app: FastifyInstance) {
         slug,
         title: body.title,
         excerpt: body.excerpt,
-        content: body.content,
+        content: asJson(body.content),
         coverImageUrl: body.coverImageUrl,
         status: finalStatus,
         publishedAt: finalStatus === PostStatus.PUBLISHED ? new Date() : null,
@@ -224,25 +253,33 @@ export async function adminPostRoutes(app: FastifyInstance) {
       if (body.title !== post.title) data.slug = await uniquePostSlug(body.title, id);
     }
     if (body.excerpt !== undefined) data.excerpt = body.excerpt;
-    if (body.content) data.content = body.content;
+    if (body.content) data.content = asJson(body.content);
     if (body.coverImageUrl !== undefined) data.coverImageUrl = body.coverImageUrl;
-    if (body.scheduledFor !== undefined)
-      data.scheduledFor = body.scheduledFor ? new Date(body.scheduledFor) : null;
 
+    // The effective status after this request, which is what decides whether a
+    // scheduledFor value is allowed to be in the past.
+    let effectiveStatus = post.status;
     if (body.status) {
       const target = coerceStatus(req.user.role, body.status);
       if (target === null) {
         return reply.code(403).send({ error: 'Not allowed to set that status' });
       }
       data.status = target;
-      if (target === PostStatus.SCHEDULED) {
-        // If the request omitted scheduledFor, fall back to the post's existing value.
-        const raw = body.scheduledFor === undefined ? post.scheduledFor : body.scheduledFor;
-        if (!isFutureDate(raw ? new Date(raw) : null)) {
-          return reply.code(400).send({ error: 'scheduledFor must be in the future' });
-        }
-      }
+      effectiveStatus = target;
       if (target === PostStatus.PUBLISHED && !post.publishedAt) data.publishedAt = new Date();
+    }
+
+    if (body.scheduledFor !== undefined) {
+      data.scheduledFor = body.scheduledFor ? new Date(body.scheduledFor) : null;
+    }
+
+    if (effectiveStatus === PostStatus.SCHEDULED) {
+      // Applies whether the status is being set now or was already SCHEDULED:
+      // moving scheduledFor into the past would publish on the next tick.
+      const raw = body.scheduledFor === undefined ? post.scheduledFor : body.scheduledFor;
+      if (!isFutureDate(raw ? new Date(raw) : null)) {
+        return reply.code(400).send({ error: 'scheduledFor must be in the future' });
+      }
     }
 
     if (body.categorySlug !== undefined) {
@@ -251,13 +288,18 @@ export async function adminPostRoutes(app: FastifyInstance) {
         : null;
     }
 
-    if (body.tagSlugs) {
-      const tagIds = await resolveTagIds(body.tagSlugs, req.user.role);
-      await prisma.postTag.deleteMany({ where: { postId: id } });
-      data.tags = { create: tagIds.map((tagId) => ({ tagId })) };
-    }
+    const tagIds = body.tagSlugs ? await resolveTagIds(body.tagSlugs, req.user.role) : null;
 
-    const updated = await prisma.post.update({ where: { id }, data, include: postInclude });
+    // Replacing tags is a delete followed by an insert. Run both with the post
+    // update in one transaction so a failure can't leave the post with its tags
+    // stripped and nothing put back.
+    const updated = await prisma.$transaction(async (tx) => {
+      if (tagIds) {
+        await tx.postTag.deleteMany({ where: { postId: id } });
+        data.tags = { create: tagIds.map((tagId) => ({ tagId })) };
+      }
+      return tx.post.update({ where: { id }, data, include: postInclude });
+    });
     return { data: serializePost(updated) };
   });
 

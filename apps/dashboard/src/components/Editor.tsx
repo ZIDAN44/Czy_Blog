@@ -29,9 +29,13 @@ function mdToHtml(md: string): string {
 }
 
 function htmlToSlice(html: string, schema: Schema) {
-  const dom = document.createElement('div');
-  dom.innerHTML = html;
-  return PMDOMParser.fromSchema(schema).parseSlice(dom);
+  // `marked` output is not sanitised, and assigning it to a live element's
+  // innerHTML is enough to run it: an `<img onerror=...>` fires even while the
+  // element is detached. DOMParser builds an inert document instead — no
+  // scripts, no resource loads — and ProseMirror only keeps the nodes and
+  // attributes its schema allows.
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return PMDOMParser.fromSchema(schema).parseSlice(doc.body);
 }
 
 const LinkIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (

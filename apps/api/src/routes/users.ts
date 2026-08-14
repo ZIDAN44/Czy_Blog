@@ -2,17 +2,28 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma, Role } from '../db.js';
+import { config } from '../config.js';
 import { atLeast, requireRole } from '../lib/rbac.js';
 import { generateApiKey } from '../lib/apiKey.js';
-import { emailField, idParam } from '../lib/schemas.js';
+import { emailField, idParam, passwordField } from '../lib/schemas.js';
 
 const roleEnum = z.enum(Role);
 
-// True when removing/demoting `id` would leave zero SUPER_ADMINs in the system.
-async function isLastSuperAdmin(id: string): Promise<boolean> {
-  const others = await prisma.user.count({ where: { role: Role.SUPER_ADMIN, NOT: { id } } });
-  return others === 0;
+// Transaction callbacks return either the value or the HTTP failure the route
+// should render, so a guard can abort the transaction without throwing.
+type Denied = { denied: { status: number; message: string } };
+type Outcome<T> = Denied | { value: T };
+
+function isDenied<T>(o: Outcome<T>): o is Denied {
+  return 'denied' in o;
 }
+
+const createUserSchema = z.object({
+  email: emailField,
+  name: z.string().trim().min(1).max(100),
+  password: passwordField,
+  role: roleEnum,
+});
 
 export async function userRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
@@ -29,14 +40,7 @@ export async function userRoutes(app: FastifyInstance) {
   // Create user SUPER_ADMIN only. This is the only path to new accounts
   // after the first-run bootstrap as there is no public registration.
   app.post('/', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
-    const body = z
-      .object({
-        email: emailField,
-        name: z.string().min(1).max(100),
-        password: z.string().min(8).max(200),
-        role: roleEnum,
-      })
-      .parse(req.body);
+    const body = createUserSchema.parse(req.body);
 
     // Audit trail when one SUPER_ADMIN grants the same role to another.
     if (body.role === Role.SUPER_ADMIN) {
@@ -53,7 +57,7 @@ export async function userRoutes(app: FastifyInstance) {
       data: {
         email: body.email,
         name: body.name,
-        passwordHash: await bcrypt.hash(body.password, 10),
+        passwordHash: await bcrypt.hash(body.password, config.bcryptRounds),
         role: body.role,
       },
       select: { id: true, email: true, name: true, role: true, createdAt: true },
@@ -61,22 +65,43 @@ export async function userRoutes(app: FastifyInstance) {
     return reply.code(201).send({ data: user });
   });
 
-  // Change a user's role for SUPER_ADMIN only. Cannot demote yourself if you are
-  // the last super-admin (prevents lockout).
+  // Change a user's role for SUPER_ADMIN only. The system must never be left
+  // without a SUPER_ADMIN, so the "is anyone else left" check and the write
+  // have to happen atomically — otherwise two concurrent demotions each see
+  // the other super-admin and both succeed.
   app.patch('/:id/role', { preHandler: [requireRole(Role.SUPER_ADMIN)] }, async (req, reply) => {
     const { id } = idParam.parse(req.params);
     const { role } = z.object({ role: roleEnum }).parse(req.body);
 
-    if (id === req.user.sub && role !== Role.SUPER_ADMIN && (await isLastSuperAdmin(id))) {
-      return reply.code(400).send({ error: 'Cannot demote the last super admin' });
-    }
+    const result = await prisma.$transaction(
+      async (tx): Promise<Outcome<{ id: string; email: string; name: string; role: Role }>> => {
+        const target = await tx.user.findUnique({ where: { id }, select: { role: true } });
+        if (!target) return { denied: { status: 404, message: 'Not found' } };
 
-    const user = await prisma.user.update({
-      where: { id },
-      data: { role },
-      select: { id: true, email: true, name: true, role: true },
-    });
-    return reply.send({ data: user });
+        const losingSuperAdmin = target.role === Role.SUPER_ADMIN && role !== Role.SUPER_ADMIN;
+        if (losingSuperAdmin) {
+          const others = await tx.user.count({
+            where: { role: Role.SUPER_ADMIN, NOT: { id } },
+          });
+          if (others === 0) {
+            return { denied: { status: 400, message: 'Cannot demote the last super admin' } };
+          }
+        }
+
+        const user = await tx.user.update({
+          where: { id },
+          data: { role },
+          select: { id: true, email: true, name: true, role: true },
+        });
+        return { value: user };
+      },
+      { isolationLevel: 'Serializable' },
+    );
+
+    if (isDenied(result)) {
+      return reply.code(result.denied.status).send({ error: result.denied.message });
+    }
+    return reply.send({ data: result.value });
   });
 
   // Delete user — SUPER_ADMIN only. Same anti-lockout rule.
@@ -84,20 +109,37 @@ export async function userRoutes(app: FastifyInstance) {
     const { id } = idParam.parse(req.params);
     if (id === req.user.sub) return reply.code(400).send({ error: 'Cannot delete yourself' });
 
-    const target = await prisma.user.findUnique({ where: { id } });
-    if (!target) return reply.code(404).send({ error: 'Not found' });
-    if (target.role === Role.SUPER_ADMIN && (await isLastSuperAdmin(id))) {
-      return reply.code(400).send({ error: 'Cannot delete the last super admin' });
-    }
+    // Re-parenting posts and media, dropping keys and deleting the row is one
+    // logical operation: a failure partway through would strand content on a
+    // user id that no longer exists (or delete the user's keys but not the user).
+    const result = await prisma.$transaction(
+      async (tx): Promise<Outcome<true>> => {
+        const target = await tx.user.findUnique({ where: { id }, select: { role: true } });
+        if (!target) return { denied: { status: 404, message: 'Not found' } };
 
-    // Posts created by this user remain (FK is required). Re-assign to caller.
-    await prisma.post.updateMany({ where: { authorId: id }, data: { authorId: req.user.sub } });
-    await prisma.media.updateMany({
-      where: { uploadedById: id },
-      data: { uploadedById: req.user.sub },
-    });
-    await prisma.apiKey.deleteMany({ where: { ownerId: id } });
-    await prisma.user.delete({ where: { id } });
+        if (target.role === Role.SUPER_ADMIN) {
+          const others = await tx.user.count({ where: { role: Role.SUPER_ADMIN, NOT: { id } } });
+          if (others === 0) {
+            return { denied: { status: 400, message: 'Cannot delete the last super admin' } };
+          }
+        }
+
+        // Posts created by this user remain (FK is required). Re-assign to caller.
+        await tx.post.updateMany({ where: { authorId: id }, data: { authorId: req.user.sub } });
+        await tx.media.updateMany({
+          where: { uploadedById: id },
+          data: { uploadedById: req.user.sub },
+        });
+        await tx.apiKey.deleteMany({ where: { ownerId: id } });
+        await tx.user.delete({ where: { id } });
+        return { value: true };
+      },
+      { isolationLevel: 'Serializable' },
+    );
+
+    if (isDenied(result)) {
+      return reply.code(result.denied.status).send({ error: result.denied.message });
+    }
     return { ok: true };
   });
 
@@ -126,19 +168,32 @@ export async function userRoutes(app: FastifyInstance) {
     if (!atLeast(role, Role.AUTHOR)) {
       return reply.code(403).send({ error: 'Insufficient role to create API keys' });
     }
-    const { name } = z.object({ name: z.string().min(1) }).parse(req.body);
+    const { name } = z.object({ name: z.string().trim().min(1).max(100) }).parse(req.body);
+
+    // An unbounded number of live keys per user is an unbounded number of
+    // credentials to leak; cap it.
+    const live = await prisma.apiKey.count({ where: { ownerId: req.user.sub, revokedAt: null } });
+    if (live >= 20) {
+      return reply.code(409).send({ error: 'Too many active API keys; revoke one first' });
+    }
+
     const { plaintext, prefix, hash } = generateApiKey();
     const key = await prisma.apiKey.create({
       data: { name, prefix, keyHash: hash, ownerId: req.user.sub },
     });
+    // `plaintext` is returned exactly once and never stored.
     return reply.code(201).send({ id: key.id, name: key.name, prefix, key: plaintext });
   });
 
   app.delete('/me/api-keys/:id', async (req, reply) => {
     const { id } = idParam.parse(req.params);
-    const key = await prisma.apiKey.findUnique({ where: { id } });
-    if (!key || key.ownerId !== req.user.sub) return reply.code(404).send({ error: 'Not found' });
-    await prisma.apiKey.update({ where: { id }, data: { revokedAt: new Date() } });
+    // Scope the write to the owner so a guessed id cannot revoke someone
+    // else's key, and so the lookup and the update can't race.
+    const { count } = await prisma.apiKey.updateMany({
+      where: { id, ownerId: req.user.sub, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    if (count === 0) return reply.code(404).send({ error: 'Not found' });
     return { ok: true };
   });
 }

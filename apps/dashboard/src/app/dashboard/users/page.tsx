@@ -245,6 +245,7 @@ export default function UsersPage() {
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               minLength={8}
+              maxLength={72}
               required
               autoComplete="off"
               data-1p-ignore

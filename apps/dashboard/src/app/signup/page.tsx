@@ -120,6 +120,7 @@ export default function SignupPage() {
               type="password"
               required
               minLength={8}
+              maxLength={72}
               autoComplete="new-password"
               placeholder="At least 8 characters"
             />

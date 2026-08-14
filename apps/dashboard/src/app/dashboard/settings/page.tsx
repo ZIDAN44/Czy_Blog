@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { api } from '@/lib/api';
+import { api, setSession, type SessionUser } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { errMsg } from '@/lib/utils';
 
@@ -23,10 +23,17 @@ export default function SettingsPage() {
     setError(null);
     setBusy(true);
     try {
-      await api('/api/v1/auth/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
+      // Changing the password invalidates every token issued before it,
+      // including the one this tab is holding — swap in the fresh session the
+      // API hands back rather than silently 401ing on the next request.
+      const session = await api<{ token: string; user: SessionUser }>(
+        '/api/v1/auth/change-password',
+        {
+          method: 'POST',
+          body: JSON.stringify({ currentPassword, newPassword }),
+        },
+      );
+      setSession(session.token, session.user);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -74,6 +81,7 @@ export default function SettingsPage() {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               minLength={8}
+              maxLength={72}
               autoComplete="new-password"
               aria-invalid={tooShort}
               placeholder="At least 8 characters"
@@ -95,6 +103,7 @@ export default function SettingsPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={8}
+              maxLength={72}
               autoComplete="new-password"
               aria-invalid={mismatch}
             />

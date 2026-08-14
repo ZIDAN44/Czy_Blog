@@ -9,20 +9,18 @@ export function startScheduler(logger: FastifyBaseLogger, intervalMs = 60_000) {
   const tick = async () => {
     try {
       const now = new Date();
-      const due = await prisma.post.findMany({
+      // One statement rather than a select followed by N updates: the read and
+      // the write can't drift apart, and two API instances ticking at the same
+      // time can't both publish the same post.
+      const { count } = await prisma.post.updateMany({
         where: {
           status: PostStatus.SCHEDULED,
           deletedAt: null,
           scheduledFor: { lte: now },
         },
-        select: { id: true },
+        data: { status: PostStatus.PUBLISHED, publishedAt: now },
       });
-      for (const { id } of due) {
-        await prisma.post.update({
-          where: { id },
-          data: { status: PostStatus.PUBLISHED, publishedAt: now },
-        });
-      }
+      if (count > 0) log.info({ count }, 'published scheduled posts');
     } catch (err) {
       log.error(err);
     }

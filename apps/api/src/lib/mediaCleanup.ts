@@ -87,7 +87,12 @@ export async function purgePostMedia(
   const orphanKeys = new Set([...keys].filter((k) => !stillReferenced.has(k)));
   if (orphanKeys.size === 0) return;
 
+  // Narrow in the query rather than loading the whole media table and
+  // filtering in memory. `url` ends with the storage filename, so an endsWith
+  // match on each orphan key is both index-friendlier and bounded by the size
+  // of this post rather than by the size of the library.
   const candidates = await prisma.media.findMany({
+    where: { OR: [...orphanKeys].map((key) => ({ url: { endsWith: `/${key}` } })) },
     select: { id: true, storagePath: true, url: true },
   });
   const toDelete = candidates.filter((m) => {

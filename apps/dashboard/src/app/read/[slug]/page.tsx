@@ -21,7 +21,12 @@ interface PostDetail {
 
 async function fetchPost(slug: string): Promise<PostDetail | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/posts/${slug}`, { cache: 'no-store' });
+    // The slug is a raw route segment. Interpolating it unencoded lets input
+    // like `../../health` walk to a different API path once fetch normalises
+    // the URL, so it is encoded as a single path segment.
+    const res = await fetch(`${API_URL}/api/v1/posts/${encodeURIComponent(slug)}`, {
+      cache: 'no-store',
+    });
     if (!res.ok) return null;
     const { data } = await res.json();
     return data;

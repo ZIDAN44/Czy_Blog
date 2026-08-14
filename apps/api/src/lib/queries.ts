@@ -9,9 +9,13 @@ export function publishedPostWhere(): Prisma.PostWhereInput {
   };
 }
 
+// Postgres still walks every row it skips, so an unbounded `page` turns a
+// cheap query into a full scan. 10k pages is far past any real reader.
+const MAX_PAGE = 10_000;
+
 export function paginationSchema(opts: { maxLimit: number; defaultLimit: number }) {
   return z.object({
-    page: z.coerce.number().int().min(1).default(1),
+    page: z.coerce.number().int().min(1).max(MAX_PAGE).default(1),
     limit: z.coerce.number().int().min(1).max(opts.maxLimit).default(opts.defaultLimit),
   });
 }
