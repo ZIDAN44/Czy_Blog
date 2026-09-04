@@ -35,13 +35,21 @@ if (isProd && corsAllowAny) {
 // client when we are actually behind a proxy we control — otherwise any client
 // can forge X-Forwarded-For and hand itself an unlimited number of buckets.
 // Default off, and require an explicit opt-in describing the trusted hops.
-function parseTrustProxy(raw: string | undefined): boolean | string | number {
+//
+// Fastify's `trustProxy` type accepts a boolean, a subnet string/list, or a
+// function `(address, hop) => boolean` — but not a bare number (proxy-addr
+// still honours numbers at runtime, the types just no longer expose it). A
+// numeric hop count is the safest opt-in behind a known number of proxies, so
+// we compile it into the equivalent predicate: trust the first `n` hops only.
+type TrustProxy = boolean | string | ((address: string, hop: number) => boolean);
+
+function parseTrustProxy(raw: string | undefined): TrustProxy {
   if (!raw) return false;
   const v = raw.trim();
   if (v === 'true') return true;
   if (v === 'false' || v === '') return false;
   const n = Number(v);
-  if (Number.isInteger(n) && n >= 0) return n; // number of trusted hops
+  if (Number.isInteger(n) && n >= 0) return (_address, hop) => hop < n; // trust n hops
   return v; // IP / CIDR list, e.g. "10.0.0.0/8,127.0.0.1"
 }
 
