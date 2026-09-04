@@ -23,8 +23,7 @@ export interface NotifyOptions {
 type Resolver = (ok: boolean) => void;
 
 type DialogState =
-  | { kind: 'confirm'; opts: ConfirmOptions }
-  | { kind: 'notify'; opts: NotifyOptions };
+  { kind: 'confirm'; opts: ConfirmOptions } | { kind: 'notify'; opts: NotifyOptions };
 
 interface ConfirmCtx {
   confirm: (opts: ConfirmOptions) => Promise<boolean>;
