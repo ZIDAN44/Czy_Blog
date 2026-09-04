@@ -13,9 +13,7 @@ interface PostSummary {
   updated_at: string;
 }
 
-// The glow behind each tile is the status colour itself, so it re-tints with
-// the theme instead of staying a pastel that only works on white. The labels
-// come from STATUS_LABEL — this table only adds the colour.
+// Each tile's glow is the status colour itself, so it re-tints with the theme. (Labels come from STATUS_LABEL.)
 const STATUS_GLOW: Record<PostStatus, string> = {
   DRAFT: 'var(--color-content-tertiary)',
   PENDING_REVIEW: 'var(--color-warning)',
@@ -81,8 +79,7 @@ export default function Overview() {
         </Link>
       </header>
 
-      {/* Counts double as filters — the control sits on the thing it changes,
-          so no label is needed to explain the mapping. */}
+      {/* Counts double as filters. */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 stagger">
         {(Object.keys(counts) as PostStatus[]).map((k) => {
           const glow = STATUS_GLOW[k];

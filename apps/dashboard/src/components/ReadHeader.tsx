@@ -4,10 +4,7 @@ import Logo from '@/components/Logo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useScrolled } from '@/lib/useMotion';
 
-/**
- * Floating chrome: the page scrolls underneath it, and the separation only
- * appears once there is actually something under it to separate from.
- */
+// Floating chrome: the page scrolls under it, and the separation appears only once scrolled.
 export default function ReadHeader() {
   const scrolled = useScrolled();
 
@@ -35,9 +32,7 @@ export default function ReadHeader() {
           >
             RSS
           </a>
-          {/* Glyphs here rather than words: the reader's chrome is narrow, and
-              the control is a familiar three-way. Each segment keeps a spoken
-              label for anyone who cannot see the sun and the moon. */}
+          {/* Glyphs, not words, for the narrow reader chrome; each segment keeps a spoken label. */}
           <ThemeToggle compact />
         </nav>
       </div>

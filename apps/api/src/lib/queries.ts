@@ -9,8 +9,7 @@ export function publishedPostWhere(): Prisma.PostWhereInput {
   };
 }
 
-// Postgres still walks every row it skips, so an unbounded `page` turns a
-// cheap query into a full scan. 10k pages is far past any real reader.
+// Postgres walks every skipped row, so an unbounded page becomes a full scan.
 const MAX_PAGE = 10_000;
 
 export function paginationSchema(opts: { maxLimit: number; defaultLimit: number }) {
@@ -24,8 +23,7 @@ export function paginated(total: number, page: number, limit: number) {
   return { page, limit, total, pages: Math.ceil(total / limit) };
 }
 
-// The offset maths belongs next to the schema that produced `page`/`limit`, so
-// the 1-based page contract is stated once rather than in every handler.
+// Offset maths lives next to its schema so the 1-based page contract is stated once.
 export function pageArgs(q: { page: number; limit: number }): { skip: number; take: number } {
   return { skip: (q.page - 1) * q.limit, take: q.limit };
 }

@@ -1,15 +1,10 @@
-// Runtime API proxy.
-//
-// Browser code calls `/api-proxy/...` (same origin). This handler forwards the
-// request to the real API at `process.env.API_URL`, read at REQUEST time.
-//  Server components can keep calling the API directly.
-
+// Runtime API proxy: browser code calls same-origin `/api-proxy/...` and this
+// forwards to process.env.API_URL, read at request time. (Server components call the API directly.)
 export const dynamic = 'force-dynamic';
 
 const API_URL = () => process.env.API_URL ?? 'http://localhost:4000';
 
-// Connection-scoped headers describe the hop we just terminated, not the one we
-// are about to open, so they must not be copied onto the upstream request.
+// Connection-scoped headers describe the hop we just terminated, so don't copy them upstream.
 const HOP_BY_HOP = [
   'host',
   'connection',
@@ -23,10 +18,8 @@ const HOP_BY_HOP = [
   'content-length',
 ];
 
-// The API buckets rate limits on the client IP it derives from these. If a
-// browser's own values were passed through, any client could rotate them and
-// hand itself unlimited buckets — this proxy is the only thing entitled to
-// state where the request came from.
+// The API derives the rate-limit client IP from these; strip the browser's own
+// values so a client can't rotate them into unlimited buckets. Only this proxy sets them.
 const CLIENT_SPOOFABLE = [
   'x-forwarded-for',
   'x-forwarded-host',
@@ -41,8 +34,7 @@ function isSafeSegment(segment: string): boolean {
 }
 
 async function forward(req: Request, path: string[]): Promise<Response> {
-  // Segments arrive decoded, so `..` here would climb the upstream path once
-  // fetch normalises the URL. Re-encode each one and refuse traversal outright.
+  // Segments arrive decoded, so a `..` would climb the upstream path; reject traversal, re-encode the rest.
   if (!path.every(isSafeSegment)) {
     return Response.json({ error: 'Invalid path' }, { status: 400 });
   }

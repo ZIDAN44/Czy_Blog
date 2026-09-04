@@ -13,21 +13,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // Let the page reach under the notch so translucent chrome can float over it.
   viewportFit: 'cover',
-  // theme-color is deliberately a single unmediated meta below, resolved by
-  // the bootstrap script — see THEME_BOOTSTRAP for why.
+  // theme-color is a single unmediated meta below, resolved by the bootstrap script (see THEME_BOOTSTRAP).
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // No webfont round-trip: the platform font already carries optical sizing
-    // and tracking tables, and it costs nothing on the input path.
+    // No webfont round-trip — the platform font already carries optical sizing and tracking.
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#fafafa" />
-        {/* Applies a stored theme before first paint. Without it, a dark-mode
-            reader gets a white flash on every navigation. It goes through
-            next/script rather than a raw tag so React does not try to render
-            it again on the client, where a script element would never run. */}
+        {/* Applies the stored theme before first paint (else a dark-mode flash).
+            Via next/script so React doesn't re-render it client-side, where it wouldn't run. */}
         <Script
           id="theme-bootstrap"
           strategy="beforeInteractive"

@@ -48,11 +48,8 @@ function parseTagSlugs(raw: string): string[] | undefined {
     .filter(Boolean);
 }
 
-/**
- * Only the outward-facing moves ask first. Saving a draft is private and
- * reversible, so it just happens and reports itself in a toast — a dialog on
- * every action is how people learn to click through without reading.
- */
+// Only outward-facing moves confirm; a private, reversible draft save just happens
+// (a dialog on every action teaches people to click through without reading).
 const CONFIRM_FOR_STATUS: Partial<Record<PostStatus, ConfirmOptions>> = {
   PENDING_REVIEW: {
     title: 'Submit for review?',
@@ -112,8 +109,7 @@ export default function PostForm({ postId, initial }: Props) {
   const role = user?.role;
   const canPublish = role && role !== 'CONTRIBUTOR';
 
-  // Snapshot of the last server-saved state; while the form matches it there is
-  // nothing unsaved, so the autosave hook stores and offers nothing.
+  // Last server-saved snapshot; while the form matches it, nothing is unsaved.
   const savedSnapshot = useRef(JSON.stringify(form));
   const draftKey = `czy:draft:${user?.id ?? 'anon'}:${postId ?? 'new'}`;
   const { recovered, dismissRecovered, clear } = useDraftAutosave(
@@ -287,8 +283,7 @@ export default function PostForm({ postId, initial }: Props) {
             )}
           </div>
 
-          {/* Say why a control is unavailable rather than leaving it dimmed
-              and unexplained. */}
+          {/* Say why the control is unavailable rather than just dimming it. */}
           {titleMissing && <p className="t-caption">Add a title to save this post.</p>}
 
           {canPublish && (

@@ -23,9 +23,8 @@ export default function SettingsPage() {
     setError(null);
     setBusy(true);
     try {
-      // Changing the password invalidates every token issued before it,
-      // including the one this tab is holding — swap in the fresh session the
-      // API hands back rather than silently 401ing on the next request.
+      // Changing the password invalidates this tab's token too, so swap in the
+      // fresh session the API returns instead of 401ing on the next request.
       const session = await api<{ token: string; user: SessionUser }>(
         '/api/v1/auth/change-password',
         {

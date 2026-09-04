@@ -15,20 +15,13 @@ const COMPACT: Segment<ThemePreference>[] = [
   { value: 'dark', label: '☾', srLabel: 'Dark appearance' },
 ];
 
-/**
- * Appearance is offered, not decided for people: "Auto" follows the system
- * and is the default, and the other two are there for anyone who wants this
- * app to differ from it.
- */
 export default function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const [pref, setPref] = useState<ThemePreference>('system');
 
-  // The inline bootstrap script has already stamped the attribute; this only
-  // catches the React state up with what is on screen.
+  // The bootstrap script already stamped the attribute; this just syncs React state to it.
   useEffect(() => setPref(readTheme()), []);
 
-  // While on "Auto", a change to the OS setting has to reach the theme-color
-  // meta too — the CSS follows on its own.
+  // On "Auto", an OS-setting change still has to reach the theme-color meta (CSS follows on its own).
   useEffect(() => {
     if (pref !== 'system') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');

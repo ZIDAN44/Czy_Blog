@@ -15,8 +15,6 @@ import { useToast } from '@/components/Toast';
 
 const lowlight = createLowlight(common);
 
-// Markdown helpers
-
 const BLOCK_MD_RE = /(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|---\s*$)/m;
 const INLINE_MD_RE = /(\*\*[^*\n]+\*\*)|(__[^_\n]+__)|(`[^`\n]+`)|(\[[^\]\n]+\]\([^)\n]+\))/;
 
@@ -29,11 +27,9 @@ function mdToHtml(md: string): string {
 }
 
 function htmlToSlice(html: string, schema: Schema) {
-  // `marked` output is not sanitised, and assigning it to a live element's
-  // innerHTML is enough to run it: an `<img onerror=...>` fires even while the
-  // element is detached. DOMParser builds an inert document instead — no
-  // scripts, no resource loads — and ProseMirror only keeps the nodes and
-  // attributes its schema allows.
+  // marked output is unsanitised; innerHTML would run it (an <img onerror> fires
+  // even detached). DOMParser builds an inert doc, and ProseMirror keeps only
+  // schema-allowed nodes/attrs.
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return PMDOMParser.fromSchema(schema).parseSlice(doc.body);
 }
@@ -54,8 +50,6 @@ const LinkIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 );
-
-// Link modal
 
 interface LinkModalProps {
   open: boolean;
@@ -93,8 +87,7 @@ function LinkModal({ open, initialUrl, hasExisting, onClose, onSubmit, onRemove 
       open={open}
       onClose={onClose}
       labelledBy="link-modal-title"
-      // There is typed input in here — a stray click on the backdrop should
-      // not throw it away.
+      // Typed input here — a stray backdrop click shouldn't discard it.
       dismissOnScrim={false}
     >
       <form onSubmit={submit}>
@@ -141,8 +134,6 @@ function LinkModal({ open, initialUrl, hasExisting, onClose, onSubmit, onRemove 
   );
 }
 
-// Toolbar
-
 function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => void }) {
   const toast = useToast();
   const [uploading, setUploading] = useState(false);
@@ -174,8 +165,7 @@ function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => voi
 
   const Divider = () => <span className="w-px bg-line-strong mx-1 self-stretch my-1" aria-hidden />;
 
-  // Grouped by what they do to the text: marks, then structure, then inserts,
-  // then history. Proximity is doing the explaining, so nothing needs a label.
+  // Grouped by effect: marks, structure, inserts, history — proximity, not labels.
   const marks = [
     {
       key: 'bold',
@@ -344,8 +334,6 @@ function ToolButton({
     </button>
   );
 }
-
-// Editor
 
 interface Props {
   initialContent: object | null;

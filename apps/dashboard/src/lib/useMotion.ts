@@ -13,10 +13,8 @@ export function useSpring(initial: number): SpringValue {
   return ref.current;
 }
 
-/**
- * Bind a spring straight to the DOM. The callback runs on every frame with the
- * live value, bypassing React so a drag stays at 1:1 with the pointer.
- */
+// Bind a spring straight to the DOM: the callback runs each frame with the live
+// value, bypassing React so a drag stays 1:1 with the pointer.
 export function useSpringEffect(
   spring: SpringValue,
   apply: (el: HTMLElement, value: number) => void,
@@ -43,19 +41,11 @@ export function useSpringEffect(
   return ref;
 }
 
-/**
- * A single indicator that travels between sibling elements, rather than a
- * highlight that blinks off here and on over there.
- *
- * Position and width ride independent springs: one spring driving both
- * desynchronises whenever they have different distances to cover (a short
- * label following a long one is the visible case). Because they are springs,
- * changing the target mid-flight re-aims from wherever the indicator
- * currently is — it never snaps back to the start.
- *
- * Callers own the markup and supply `setItem(key)` as each item's ref. The
- * indicator hides itself whenever no item matches `activeKey`.
- */
+// One indicator that travels between siblings instead of blinking off/on.
+// Position and width ride independent springs (one spring desyncs when they
+// cover different distances), re-aiming from the live position mid-flight.
+// Callers own the markup and pass setItem(key) as each item's ref; the
+// indicator hides when no item matches activeKey.
 export function useMovingIndicator<
   K,
   Track extends HTMLElement = HTMLElement,
@@ -140,18 +130,12 @@ export function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-/**
- * Touch-sized viewports get sheets you can throw; pointer-sized ones get
- * centred surfaces. Same content, adapted to how the device is held.
- */
+// Touch viewports get throwable sheets; larger ones get centred surfaces.
 export function useIsCompact(): boolean {
   return useMediaQuery('(max-width: 639px)');
 }
 
-/**
- * Locks body scroll while a modal surface is up, without the layout shift that
- * comes from the scrollbar disappearing.
- */
+// Locks body scroll while a modal is up, padding for the vanished scrollbar so nothing shifts.
 export function useScrollLock(active: boolean) {
   useEffect(() => {
     if (!active) return;
@@ -180,10 +164,7 @@ export function useScrolled(threshold = 4): boolean {
   return scrolled;
 }
 
-/**
- * Traps focus inside a surface and restores it to whatever was focused before.
- * Wayfinding: a modal must never be a place you can tab out of and get lost in.
- */
+// Traps Tab focus inside a surface and restores it on close, so a modal can't be tabbed out of.
 export function useFocusTrap(active: boolean) {
   const ref = useRef<HTMLElement | null>(null);
 

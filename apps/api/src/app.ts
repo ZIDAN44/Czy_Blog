@@ -18,8 +18,7 @@ import { mediaRoutes } from './routes/media.js';
 import { adminTaxonomyRoutes, publicTaxonomyRoutes } from './routes/taxonomy.js';
 import { rssRoutes } from './routes/rss.js';
 
-// Prisma error code -> HTTP status. Without this every unique-constraint race
-// or missing row surfaces as a 500 carrying Prisma's internal message.
+// Prisma error code -> HTTP status, so races/missing rows don't surface as 500s with Prisma's message.
 const PRISMA_STATUS: Record<string, { status: number; message: string }> = {
   P2002: { status: 409, message: 'Already exists' },
   P2003: { status: 409, message: 'Referenced by other records' },
@@ -45,9 +44,8 @@ export async function buildApp() {
   });
 
   await app.register(helmet, {
-    // The API serves JSON and uploaded images, never its own HTML, so the
-    // strictest CSP applies. `crossOriginResourcePolicy` has to allow the
-    // dashboard on another origin to display /uploads images.
+    // Serves only JSON and images, never HTML, so the CSP is strictest; CORP must
+    // still allow the dashboard on another origin to display /uploads images.
     contentSecurityPolicy: {
       directives: {
         'default-src': ["'none'"],
@@ -78,8 +76,7 @@ export async function buildApp() {
   await app.register(rateLimit, {
     max: 300,
     timeWindow: '1 minute',
-    // No allowList: behind a proxy every request appears to come from the
-    // proxy's address, so allow-listing loopback disables the limiter wholesale.
+    // No allowList: behind a proxy every request shares the proxy IP, so it'd disable the limiter.
   });
 
   await app.register(multipart, {
@@ -100,8 +97,7 @@ export async function buildApp() {
         index: false,
         dotfiles: 'deny',
         decorateReply: false,
-        // Uploads are user-supplied bytes. Pin the sniffing behaviour so a file
-        // that slips past upload validation still cannot execute as HTML.
+        // User-supplied bytes: pin sniffing so a file past validation can't execute as HTML.
         setHeaders: (reply) => {
           reply.header('X-Content-Type-Options', 'nosniff');
           reply.header('Content-Security-Policy', "default-src 'none'; sandbox");
@@ -114,11 +110,9 @@ export async function buildApp() {
 
   await app.register(authPlugin);
 
-  // These must be installed BEFORE the route plugins below. A child context
-  // inherits the error handler its parent had at the moment it was created, so
-  // setting one after `register()` leaves every route on Fastify's default
-  // handler — which reported validation failures as 500s carrying the raw Zod
-  // message instead of a 400.
+  // Must be set BEFORE the route plugins: a child context inherits the error handler
+  // present when it's created, so a later setter leaves routes on Fastify's default
+  // (validation failures as 500s with the raw Zod message instead of 400).
   app.setNotFoundHandler(async (_req, reply) => reply.code(404).send({ error: 'Not found' }));
 
   app.setErrorHandler((err, req, reply) => {
@@ -135,8 +129,7 @@ export async function buildApp() {
     const e = err as { statusCode?: number; message?: string };
     const status = e.statusCode ?? 500;
     if (status >= 500) {
-      // Internal messages can carry query fragments, file paths and connection
-      // strings. Log them, never ship them to the caller.
+      // Internal messages can leak queries, paths, connection strings — log, never send.
       req.log.error({ err }, 'request failed');
       return reply.code(status).send({ error: 'Internal Server Error' });
     }

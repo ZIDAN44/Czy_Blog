@@ -3,20 +3,12 @@ import { z } from 'zod';
 /**
  * Validation for block-editor (Tiptap/ProseMirror) documents.
  *
- * The previous schema accepted `{ type: 'doc', content: z.any()[] }`, which put
- * arbitrary attacker-controlled JSON into a column that is later rendered into
- * the public page. Two separate problems come out of that:
- *
- *  1. URL-bearing attributes (`href`, `src`) could hold `javascript:` or
- *     `data:text/html` and become stored XSS in whatever renders them.
- *  2. Nothing bounded the document, so a single request could persist a
- *     structure deep or wide enough to blow the stack of any recursive
- *     renderer, or to make every read of that post expensive.
- *
- * So the document is validated against the node/mark vocabulary the editor and
- * the renderer actually implement, with hard structural limits. The walk below
- * is iterative on purpose — validating deeply nested input must not itself
- * recurse.
+ * The stored JSON is rendered into the public page, so it's validated against
+ * the node/mark vocabulary the editor/renderer implement, with hard structural
+ * limits: URL attrs get a scheme allowlist (else stored XSS via javascript:/
+ * data:), and depth/size are bounded (else a recursive renderer blows its stack
+ * or every read gets expensive). The walk is iterative so validation itself
+ * never recurses.
  */
 
 const MAX_DEPTH = 30;
@@ -25,8 +17,7 @@ const MAX_TEXT_LENGTH = 50_000;
 const MAX_MARKS_PER_NODE = 16;
 const MAX_ATTR_STRING = 2048;
 
-// Node types the renderer knows how to draw. Anything else is rejected rather
-// than silently stored and then dropped (or worse, rendered) at read time.
+// Node types the renderer knows how to draw; anything else is rejected up front.
 const NODE_TYPES = new Set([
   'doc',
   'paragraph',
@@ -44,19 +35,17 @@ const NODE_TYPES = new Set([
 
 const MARK_TYPES = new Set(['bold', 'italic', 'strike', 'code', 'link']);
 
-// Attribute keys carrying a URL. These get a scheme allowlist; everything else
-// is length-bounded only.
+// URL-bearing attrs get a scheme allowlist; every other attr is length-bounded only.
 const URL_ATTRS = new Set(['src', 'href']);
 
-// Relative paths are fine (`/uploads/x.webp`); absolute URLs must be http(s).
-// Protocol-relative (`//host`) is excluded because its scheme is inherited.
+// Relative paths are fine; absolute URLs must be http(s)/mailto. Protocol-relative
+// (`//host`) is rejected since it inherits the current scheme.
 function isSafeUrl(value: string): boolean {
   const v = value.trim();
   if (v === '') return false;
   if (v.startsWith('//')) return false;
   if (v.startsWith('/') || v.startsWith('#') || v.startsWith('?')) return true;
-  // No scheme separator at all means a document-relative path (`img/a.png`).
-  // A colon appearing only after the first `/` is part of the path, not a scheme.
+  // No colon means a document-relative path; a colon only after the first `/` is path, not scheme.
   const colon = v.indexOf(':');
   if (colon === -1) return true;
   const slash = v.indexOf('/');

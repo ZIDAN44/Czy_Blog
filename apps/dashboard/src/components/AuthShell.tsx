@@ -1,12 +1,7 @@
 import Logo from '@/components/Logo';
 
-/**
- * The split layout both unauthenticated pages sit in: a brand panel that only
- * appears when there is room for it, and a centred column for the form.
- *
- * Only the gradient and the panel's copy differ between sign-in and first-run
- * setup, so those are the props — the chrome around them is stated once.
- */
+// Split layout for the unauthenticated pages: a brand panel (shown when there's room)
+// and a centred form column. Only the gradient and panel copy vary, so they're the props.
 export default function AuthShell({
   gradient,
   panel,

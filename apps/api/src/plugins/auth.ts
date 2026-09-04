@@ -25,19 +25,14 @@ declare module 'fastify' {
   }
 }
 
-// A plaintext key is `czk_` + 32 base64url chars. Anything wildly longer is not
-// a key we ever issued, so reject before spending a hash and a query on it.
+// A key is `czk_` + 32 base64url chars; anything longer we never issued, so reject early.
 const MAX_API_KEY_LENGTH = 128;
 
-// Don't write to the DB on every single authenticated request just to move a
-// timestamp; once a minute is enough resolution for "last used".
+// "last used" resolution: touch the DB at most once a minute, not on every request.
 const API_KEY_TOUCH_INTERVAL_MS = 60_000;
 
-/**
- * Re-load the user behind a verified token. Returns null when the token must be
- * rejected: the account is gone, or its `tokenVersion` has moved past the one
- * embedded in the token (i.e. the password was changed after it was issued).
- */
+// Re-load the user behind a verified token; null = reject (account gone, or
+// tokenVersion moved on, e.g. password changed after the token was issued).
 async function resolveSession(claims: unknown): Promise<SessionClaims | null> {
   const c = claims as { sub?: unknown; tv?: unknown } | undefined;
   if (typeof c?.sub !== 'string' || !c.sub) return null;
@@ -66,9 +61,8 @@ export default fp(async (app: FastifyInstance) => {
     },
   });
 
-  // Verify the JWT, then re-load the user's role from the DB so that role
-  // changes (demotions, deletions, password resets) take effect immediately
-  // rather than waiting up to the 7-day token expiry.
+  // Verify the JWT, then re-load the user from the DB so role changes (demotions,
+  // deletions, password resets) take effect immediately, not after the 7-day expiry.
   app.decorate('authenticate', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       await req.jwtVerify();

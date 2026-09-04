@@ -12,11 +12,8 @@ interface PostSummary {
   tags: { slug: string; name: string }[];
 }
 
-/**
- * `null` means the API could not be reached at all, which is a different
- * thing to say than "nothing published yet" — an unreachable server used to
- * take the whole page down with a 500.
- */
+// `null` = API unreachable (distinct from "nothing published yet"), so the page
+// degrades instead of 500-ing.
 async function fetchPosts(): Promise<PostSummary[] | null> {
   try {
     const res = await fetch(`${API_URL}/api/v1/posts?limit=20`, { cache: 'no-store' });

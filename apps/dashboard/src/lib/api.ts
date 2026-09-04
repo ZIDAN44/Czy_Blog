@@ -60,12 +60,8 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   return (await res.json()) as T;
 }
 
-/**
- * Whether the install still has no users, i.e. `/signup` is open. The landing
- * page, the login page and the signup page all gate on this, so the endpoint
- * and its unauthenticated call shape are stated once. Throws if the API cannot
- * be reached — each caller decides what an unreachable API should mean there.
- */
+// Whether the install has no users yet (so /signup is open). Stated once for the
+// landing/login/signup pages; throws if the API is unreachable, callers decide what that means.
 export async function needsBootstrap(): Promise<boolean> {
   const r = await api<{ needsBootstrap: boolean }>('/api/v1/auth/bootstrap-status', {
     skipAuth: true,

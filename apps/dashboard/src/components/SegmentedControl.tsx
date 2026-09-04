@@ -16,10 +16,7 @@ interface Props<T extends string> {
   className?: string;
 }
 
-/**
- * The selection is one object that moves between positions — see
- * `useMovingIndicator`, which this shares with the dashboard's nav rail.
- */
+// Selection moves between positions (via useMovingIndicator, shared with the nav rail).
 export default function SegmentedControl<T extends string>({
   segments,
   value,
@@ -40,8 +37,7 @@ export default function SegmentedControl<T extends string>({
       aria-label={label}
       className={`relative inline-flex gap-1 p-1 rounded-xl bg-surface-sunken border border-line ${className}`}
     >
-      {/* The moving selection is a raised chip: it sits above the sunken
-          track, which is what makes "selected" read without a colour change. */}
+      {/* Raised chip above the sunken track — reads as "selected" without a colour change. */}
       <span
         ref={indicatorRef}
         aria-hidden

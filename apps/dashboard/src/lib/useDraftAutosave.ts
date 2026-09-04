@@ -11,16 +11,9 @@ interface Recovered<T> {
   savedAt: number;
 }
 
-/**
- * Persists a form snapshot to localStorage so unsaved work survives a tab
- * close or browser crash, without touching the server.
- *
- * Writes use a trailing debounce (only after the user pauses), and flush
- * eagerly when the tab is hidden/closed so the last keystrokes aren't lost.
- *
- * `baseline` is the JSON of the last server-saved state: while the snapshot
- * matches it there is nothing unsaved, so no draft is stored or offered.
- */
+// Persists a form snapshot to localStorage so unsaved work survives a tab close/crash.
+// Writes are trailing-debounced and flushed when the tab hides. `baseline` is the last
+// server-saved JSON — while the snapshot matches it, nothing is stored or offered.
 export function useDraftAutosave<T>(key: string, value: T, baseline: string, delay = 1000) {
   const [recovered, setRecovered] = useState<Recovered<T> | null>(null);
 

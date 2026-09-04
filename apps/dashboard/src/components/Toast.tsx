@@ -17,13 +17,8 @@ import {
 } from '@/lib/motion';
 import { useSpring } from '@/lib/useMotion';
 
-/**
- * Non-blocking feedback.
- *
- * Confirmation dialogs are for decisions; this is for the four kinds of
- * feedback that only need to be *seen* — status, completion, warning, error.
- * Reserving the dialog for genuine decisions is what keeps it meaningful.
- */
+// Non-blocking feedback that only needs to be seen (status/success/warning/error);
+// dialogs stay reserved for actual decisions.
 export type ToastTone = 'status' | 'success' | 'warning' | 'error';
 
 export interface ToastOptions {
@@ -96,8 +91,8 @@ function ToastItem({ toast, onDismiss }: { toast: ToastRecord; onDismiss: () => 
   const timer = useRef<number | null>(null);
   const reduced = prefersReducedMotion();
 
-  // Measured on mount and at each grab, never inside the frame loop: reading
-  // layout while writing to it is how a 60fps drag turns into a stuttering one.
+  // Measured on mount and each grab, never in the frame loop — reading layout
+  // while writing it stutters the drag.
   const widthRef = useRef(320);
 
   const paint = useCallback(() => {

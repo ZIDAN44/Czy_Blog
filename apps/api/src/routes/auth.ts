@@ -7,8 +7,7 @@ import { emailField, passwordField } from '../lib/schemas.js';
 
 const loginSchema = z.object({
   email: emailField,
-  // Not `passwordField`: an existing password must be accepted as-is for
-  // comparison, it just must not be unbounded work for bcrypt.
+  // Not passwordField: accept an existing password as-is, just bound bcrypt's work.
   password: z.string().min(1).max(72),
 });
 
@@ -28,13 +27,11 @@ const changePasswordSchema = z
     path: ['newPassword'],
   });
 
-// Credential endpoints are the ones worth brute-forcing, so they get a far
-// tighter budget than the global limiter.
+// Credential endpoints are worth brute-forcing, so a tighter budget than the global limiter.
 const CREDENTIAL_RATE_LIMIT = { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } };
 
-// A pre-computed bcrypt hash of a random string. Used to keep the login path
-// taking roughly constant time when the email is not in the DB, so attackers
-// can't enumerate accounts via response timing.
+// Pre-computed hash of a random string: keeps login near-constant-time on unknown
+// emails so accounts can't be enumerated by response timing.
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password-' + Math.random(), config.bcryptRounds);
 
 export async function authRoutes(app: FastifyInstance) {
@@ -68,9 +65,8 @@ export async function authRoutes(app: FastifyInstance) {
     const body = bootstrapSchema.parse(req.body);
     const passwordHash = await bcrypt.hash(body.password, config.bcryptRounds);
 
-    // Counting and then inserting in two statements lets two concurrent
-    // requests both see an empty table and both mint a SUPER_ADMIN. A
-    // serializable transaction makes the second one fail instead.
+    // Count + insert in a serializable tx: two concurrent requests can't both see
+    // an empty table and both mint a SUPER_ADMIN — the second one fails.
     const user = await prisma
       .$transaction(
         async (tx) => {
@@ -116,8 +112,7 @@ export async function authRoutes(app: FastifyInstance) {
       if (!user || !(await bcrypt.compare(body.currentPassword, user.passwordHash))) {
         return reply.code(401).send({ error: 'Current password incorrect' });
       }
-      // Bumping tokenVersion invalidates every token issued before this change,
-      // so a stolen token stops working the moment the password is rotated.
+      // Bumping tokenVersion invalidates every token issued before now, so a stolen one dies on rotate.
       const updated = await prisma.user.update({
         where: { id: user.id },
         data: {
@@ -125,8 +120,7 @@ export async function authRoutes(app: FastifyInstance) {
           tokenVersion: { increment: 1 },
         },
       });
-      // The caller's current token is now invalid too — hand back a fresh one
-      // so changing your password doesn't log you out of the tab you're in.
+      // The caller's own token is now invalid too; return a fresh one so they stay logged in.
       return issueSession(updated);
     },
   );

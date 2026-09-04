@@ -64,7 +64,7 @@ async function deleteMediaRows(
     try {
       await fs.unlink(row.storagePath);
     } catch (err) {
-      // Missing file is fine and still drop the row. Log anything else, keep going.
+      // Missing file is fine; still drop the row. Log anything else, keep going.
       if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
         log.warn({ err, storagePath: row.storagePath }, 'failed to unlink media file');
       }
@@ -87,10 +87,8 @@ export async function purgePostMedia(
   const orphanKeys = new Set([...keys].filter((k) => !stillReferenced.has(k)));
   if (orphanKeys.size === 0) return;
 
-  // Narrow in the query rather than loading the whole media table and
-  // filtering in memory. `url` ends with the storage filename, so an endsWith
-  // match on each orphan key is both index-friendlier and bounded by the size
-  // of this post rather than by the size of the library.
+  // Narrow in the query (endsWith on the storage filename) instead of loading the
+  // whole media table — bounded by this post, not the whole library.
   const candidates = await prisma.media.findMany({
     where: { OR: [...orphanKeys].map((key) => ({ url: { endsWith: `/${key}` } })) },
     select: { id: true, storagePath: true, url: true },
@@ -104,8 +102,8 @@ export async function purgePostMedia(
   if (removed > 0) log.info({ removed }, 'purged media attached to deleted post');
 }
 
-// Sweep via the isOrphan flag: in use -> clear; unreferenced -> flag, then
-// delete on the next sweep if still unreferenced (one cycle of grace).
+// Sweep via the isOrphan flag: in use -> clear; unreferenced -> flag, then delete
+// next sweep if still unreferenced (one cycle of grace).
 export async function sweepOrphanedMedia(log: FastifyBaseLogger): Promise<void> {
   const referenced = await collectReferencedKeys();
   const all = await prisma.media.findMany({

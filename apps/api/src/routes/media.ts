@@ -8,15 +8,9 @@ import { pageArgs, paginated, paginationSchema } from '../lib/queries.js';
 
 const id = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 16);
 
-/**
- * The stored extension is chosen from this table, never from the uploaded
- * filename. Deriving it from `file.filename` let a caller store `x.html` (or
- * anything else) under the static `/uploads/` prefix and get it served back as
- * that type — stored XSS on the API origin.
- *
- * SVG is deliberately absent: it is an XML document that can carry script, so
- * it cannot be treated as an inert image.
- */
+// The stored extension comes from this table, never the uploaded filename —
+// otherwise a caller stores x.html under /uploads/ and gets it served as HTML
+// (stored XSS). SVG is excluded: it's XML that can carry script.
 const IMAGE_TYPES = [
   {
     mime: 'image/jpeg',
@@ -46,8 +40,7 @@ const IMAGE_TYPES = [
   {
     mime: 'image/avif',
     ext: '.avif',
-    // ISOBMFF: 4-byte box size, 'ftyp', then a brand. AVIF brands start 'avif'
-    // for stills and 'avis' for sequences.
+    // ISOBMFF box: after the size comes 'ftyp' then a brand ('avif' still, 'avis' sequence).
     matches: (b: Buffer) => {
       if (b.subarray(4, 8).toString('latin1') !== 'ftyp') return false;
       const brand = b.subarray(8, 12).toString('latin1');
@@ -65,10 +58,7 @@ function sniffImage(buf: Buffer): { mime: string; ext: string } | null {
   return hit ? { mime: hit.mime, ext: hit.ext } : null;
 }
 
-/**
- * The original name is kept only for display. Strip anything that could be
- * read as a path or as control characters before it is stored and echoed back.
- */
+// Kept for display only: strip path separators and control chars before storing/echoing.
 function safeDisplayName(raw: string | undefined): string {
   // eslint-disable-next-line no-control-regex
   const base = path.basename(raw ?? '').replace(/[\x00-\x1f\x7f<>:"/\\|?*]/g, '');
@@ -82,8 +72,7 @@ export async function mediaRoutes(app: FastifyInstance) {
   app.post(
     '/upload',
     {
-      // Uploads are far more expensive than a JSON request; give them their own
-      // budget instead of letting them consume the global one.
+      // Uploads are pricier than JSON, so give them their own budget.
       config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     },
     async (req, reply) => {
@@ -91,9 +80,8 @@ export async function mediaRoutes(app: FastifyInstance) {
       if (!file) return reply.code(400).send({ error: 'No file' });
 
       const buf = await file.toBuffer();
-      // @fastify/multipart stops reading at the configured limit and flags the
-      // stream rather than throwing, so a truncated file would otherwise be
-      // stored as a valid-looking partial upload.
+      // multipart flags the stream at the size limit instead of throwing, so catch
+      // the truncation here or a partial upload gets stored as valid.
       if (file.file.truncated) {
         return reply.code(413).send({ error: `File exceeds ${config.maxUploadBytes} bytes` });
       }
@@ -108,9 +96,7 @@ export async function mediaRoutes(app: FastifyInstance) {
       const storageName = `${id()}${sniffed.ext}`;
       const root = path.resolve(config.uploadDir);
       const fullPath = path.join(root, storageName);
-      // `storageName` is built from a fixed alphabet and a fixed extension, so
-      // this cannot currently escape — assert it anyway, because that guarantee
-      // lives in another function.
+      // storageName can't currently escape root, but assert it — that guarantee lives elsewhere.
       if (path.dirname(fullPath) !== root) {
         return reply.code(400).send({ error: 'Invalid upload target' });
       }

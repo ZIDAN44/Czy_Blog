@@ -3,9 +3,7 @@ import { prisma } from '../db.js';
 import { config } from '../config.js';
 import { publishedPostWhere } from '../lib/queries.js';
 
-// Characters XML 1.0 forbids outright. They cannot be escaped into validity,
-// so a single stray control byte in a title would make the whole feed
-// unparseable — strip them before escaping the rest.
+// Chars XML 1.0 forbids: unescapable, so one stray byte breaks the whole feed. Strip before escaping.
 // eslint-disable-next-line no-control-regex
 const INVALID_XML_CHARS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g;
 

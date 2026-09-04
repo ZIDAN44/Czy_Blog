@@ -14,10 +14,7 @@ export function initials(name: string | null | undefined): string {
     .toUpperCase();
 }
 
-/**
- * What each status is called in the UI. One table, so the overview tiles and
- * the posts filter cannot end up naming the same status differently.
- */
+// UI name for each status, in one table so the tiles and the filter can't disagree.
 export const STATUS_LABEL: Record<PostStatus, string> = {
   DRAFT: 'Drafts',
   PENDING_REVIEW: 'In review',

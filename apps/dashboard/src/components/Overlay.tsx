@@ -11,21 +11,14 @@ import {
 } from '@/lib/motion';
 import { useFocusTrap, useScrollLock, useSpring, useSpringEffect } from '@/lib/useMotion';
 
-/* ------------------------------------------------------------------ *
- * Portal host
- * ------------------------------------------------------------------ */
-
 function usePortal(): HTMLElement | null {
   const [host, setHost] = useState<HTMLElement | null>(null);
   useEffect(() => setHost(document.body), []);
   return host;
 }
 
-/**
- * Escape dismisses whatever surface is up. Every overlay below needs it, and
- * it must only listen while the surface is actually mounted — a stale listener
- * would close a surface that has already left.
- */
+// Escape dismisses the current surface; only listen while mounted, or a stale
+// listener would close a surface that already left.
 function useEscapeKey(active: boolean, onClose: () => void) {
   useEffect(() => {
     if (!active) return;
@@ -37,14 +30,8 @@ function useEscapeKey(active: boolean, onClose: () => void) {
   }, [active, onClose]);
 }
 
-/* ------------------------------------------------------------------ *
- * Modal — a centred surface for a task that blocks
- *
- * It materialises rather than fades: blur, scale and opacity move together,
- * so the glass reads as a real surface arriving. Enter and exit run the same
- * path in reverse, so dismissing returns it to where it came from.
- * ------------------------------------------------------------------ */
-
+// Modal — a centred, blocking surface. It materialises (blur+scale+opacity together)
+// rather than fades, and exit runs enter in reverse.
 interface ModalProps {
   open: boolean;
   onClose: () => void;
@@ -78,7 +65,7 @@ export function Modal({
     } else if (mounted) {
       progress.to(0, { ...SPRING_SMOOTH, response: 0.28, onRest: () => setMounted(false) });
     }
-    // `mounted` would re-trigger the exit if it were a dependency.
+    // `mounted` is omitted from deps: it would re-trigger the exit.
   }, [open, progress]);
 
   useScrollLock(mounted);
@@ -125,14 +112,8 @@ export function Modal({
   );
 }
 
-/* ------------------------------------------------------------------ *
- * Sheet — the same task, on a device you hold
- *
- * Tracks the finger 1:1, resists past the top edge instead of stopping dead,
- * and on release projects where the throw was going before deciding whether
- * to dismiss. It can be caught mid-flight and thrown back.
- * ------------------------------------------------------------------ */
-
+// Sheet — the modal's touch form. Tracks the finger 1:1, rubber-bands past the top
+// edge, and on release projects the throw to decide dismiss vs. snap back.
 interface SheetProps {
   open: boolean;
   onClose: () => void;
@@ -218,8 +199,7 @@ export function Sheet({
     const el = e.currentTarget;
     el.setPointerCapture(e.pointerId);
     dragging.current = true;
-    // Start from the live on-screen value, not the target: catching a moving
-    // sheet must not make it jump.
+    // Start from the live value, not the target, so catching a moving sheet doesn't jump.
     y.stop();
     grabOffset.current = e.clientY - y.current;
     tracker.current.reset();
@@ -230,8 +210,7 @@ export function Sheet({
     if (!dragging.current) return;
     tracker.current.add(e.clientY);
     const raw = e.clientY - grabOffset.current;
-    // Pulling above the resting position resists progressively — the sheet
-    // stays responsive, it just says there is nothing more up there.
+    // Pulling above the rest position rubber-bands instead of stopping dead.
     const next = raw < 0 ? rubberband(raw, heightRef.current || window.innerHeight) : raw;
     y.set(next);
   }
@@ -289,14 +268,8 @@ export function Sheet({
   );
 }
 
-/* ------------------------------------------------------------------ *
- * Popover — a parallel, non-blocking panel
- *
- * No scrim: it does not take over, so it should not dim what it sits beside.
- * It scales from its trigger, so the relationship between the button and what
- * it opened stays obvious.
- * ------------------------------------------------------------------ */
-
+// Popover — a non-blocking panel. No scrim (it doesn't take over), and it scales
+// from its trigger so the button-to-panel relationship stays obvious.
 interface PopoverProps {
   open: boolean;
   onClose: () => void;
@@ -340,7 +313,7 @@ export function Popover({
     function onDown(e: MouseEvent) {
       if (!panelRef.current?.contains(e.target as Node)) onClose();
     }
-    // Deferred so the click that opened it does not immediately close it.
+    // Deferred so the opening click doesn't immediately close it.
     const id = window.setTimeout(() => document.addEventListener('mousedown', onDown), 0);
     return () => {
       window.clearTimeout(id);

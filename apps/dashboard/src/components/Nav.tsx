@@ -33,8 +33,7 @@ export default function Nav() {
 
   const canManageUsers = user && (user.role === 'SUPER_ADMIN' || user.role === 'EDITOR');
 
-  // Named for what they contain, not for vague umbrellas — a specific label is
-  // what makes a destination predictable before you get there.
+  // Specific labels, not vague umbrellas — a destination should be predictable.
   const links: NavLink[] = [
     { href: '/dashboard', label: 'Overview' },
     { href: '/dashboard/posts', label: 'Posts' },
@@ -87,8 +86,7 @@ export default function Nav() {
                 {user?.name}
               </span>
             </button>
-            {/* The panel grows out of the avatar it belongs to, so the
-                relationship between button and contents stays obvious. */}
+            {/* Grows out of the avatar it belongs to. */}
             {!compact && (
               <Popover
                 open={menuOpen}
@@ -166,11 +164,7 @@ function AccountMenu({
   );
 }
 
-/**
- * The active marker is one object that travels between destinations rather
- * than a highlight that teleports — see `useMovingIndicator`, which this
- * shares with SegmentedControl.
- */
+// Active marker travels between destinations (via useMovingIndicator, shared with SegmentedControl).
 function NavRail({
   links,
   activeHref,

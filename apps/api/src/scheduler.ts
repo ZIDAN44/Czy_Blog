@@ -9,9 +9,8 @@ export function startScheduler(logger: FastifyBaseLogger, intervalMs = 60_000) {
   const tick = async () => {
     try {
       const now = new Date();
-      // One statement rather than a select followed by N updates: the read and
-      // the write can't drift apart, and two API instances ticking at the same
-      // time can't both publish the same post.
+      // One updateMany, not select-then-update: read/write can't drift and two
+      // instances ticking together can't both publish the same post.
       const { count } = await prisma.post.updateMany({
         where: {
           status: PostStatus.SCHEDULED,

@@ -23,24 +23,15 @@ const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
   .map((s) => s.trim())
   .filter(Boolean);
 
-// `*` combined with credentialed requests is what turns a permissive CORS
-// policy into a real vulnerability: the browser is told any site may read
-// authenticated responses. Refuse it outright in production.
+// `*` with credentialed requests lets any site read authenticated responses; ban it in prod.
 const corsAllowAny = corsOrigins.includes('*');
 if (isProd && corsAllowAny) {
   throw new Error('CORS_ORIGINS must list explicit origins in production; "*" is not allowed');
 }
 
-// `request.ip` is what the rate limiter buckets on. It only reflects the real
-// client when we are actually behind a proxy we control — otherwise any client
-// can forge X-Forwarded-For and hand itself an unlimited number of buckets.
-// Default off, and require an explicit opt-in describing the trusted hops.
-//
-// Fastify's `trustProxy` type accepts a boolean, a subnet string/list, or a
-// function `(address, hop) => boolean` — but not a bare number (proxy-addr
-// still honours numbers at runtime, the types just no longer expose it). A
-// numeric hop count is the safest opt-in behind a known number of proxies, so
-// we compile it into the equivalent predicate: trust the first `n` hops only.
+// request.ip buckets the rate limiter, so X-Forwarded-For is only trustworthy behind
+// a proxy we control — opt in explicitly. A numeric hop count compiles to a predicate
+// (the type no longer exposes bare numbers, though proxy-addr still honours them).
 type TrustProxy = boolean | string | ((address: string, hop: number) => boolean);
 
 function parseTrustProxy(raw: string | undefined): TrustProxy {
@@ -54,18 +45,15 @@ function parseTrustProxy(raw: string | undefined): TrustProxy {
 }
 
 export const config = {
-  // `API_PORT`/`API_HOST` are the names used in the shared root `.env`; a bare
-  // `PORT`/`HOST` would collide with the dashboard, which reads those too.
-  // The unprefixed pair is still honoured as a fallback for platforms (Heroku,
-  // Fly, the container image) that inject `PORT` on their own.
+  // API_PORT/API_HOST are the root .env names (bare PORT/HOST collide with the dashboard);
+  // the unprefixed pair is kept as a fallback for platforms that inject PORT.
   port: Number(process.env.API_PORT ?? process.env.PORT ?? 4000),
   host: process.env.API_HOST ?? process.env.HOST ?? '0.0.0.0',
   isProd,
   jwtSecret,
   jwtIssuer: process.env.JWT_ISSUER ?? 'czy-blog',
   jwtAudience: process.env.JWT_AUDIENCE ?? 'czy-blog-api',
-  // OWASP's current password-storage guidance for bcrypt is a work factor of
-  // 10 as a floor; 12 is the practical default on modern hardware.
+  // bcrypt work factor: OWASP floor is 10; 12 is the modern default.
   bcryptRounds: Number(process.env.BCRYPT_ROUNDS ?? 12),
   databaseUrl: required('DATABASE_URL'),
   corsOrigins,

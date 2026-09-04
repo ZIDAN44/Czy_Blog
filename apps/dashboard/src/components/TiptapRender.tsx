@@ -2,14 +2,9 @@
 // so the published page matches what authors saw while writing.
 import React from 'react';
 
-/**
- * Post content is authored by CONTRIBUTOR-level accounts and rendered on the
- * public page, so every URL that reaches an `href`/`src` here is untrusted.
- * React does not block `javascript:` URLs, so an unchecked `href` from the
- * document would be stored XSS against every reader. The API rejects these at
- * write time too — this is the second half of that check, for documents that
- * predate it or arrive from anywhere else.
- */
+// URLs in authored content are untrusted, and React doesn't block javascript:
+// hrefs (stored XSS). The API checks these at write time; this is the second
+// half, for documents that predate that check or arrive elsewhere.
 const SAFE_SCHEMES = ['http:', 'https:', 'mailto:'];
 
 function safeUrl(value: unknown): string | undefined {
@@ -19,7 +14,7 @@ function safeUrl(value: unknown): string | undefined {
   if (v.startsWith('/') || v.startsWith('#') || v.startsWith('?')) return v;
   const colon = v.indexOf(':');
   const slash = v.indexOf('/');
-  // No scheme at all, or a colon that sits inside the path: document-relative.
+  // No colon, or a colon inside the path: document-relative.
   if (colon === -1 || (slash !== -1 && slash < colon)) return v;
   try {
     return SAFE_SCHEMES.includes(new URL(v).protocol) ? v : undefined;
@@ -51,11 +46,9 @@ function applyMarks(text: string, marks: Node['marks'], key: string): React.Reac
         <a
           key={key}
           href={href}
-          // `target` comes from the document, so it is not free-form: the only
-          // choice offered is same-tab or new-tab.
+          // target from the document is constrained to same-tab or new-tab only.
           target={m.attrs?.target === '_self' ? '_self' : '_blank'}
-          // noopener keeps the opened page from reaching back through
-          // window.opener; noreferrer keeps the reader's URL out of its logs.
+          // noopener blocks window.opener; noreferrer keeps the reader's URL out of logs.
           rel="noopener noreferrer nofollow"
         >
           {node}
@@ -68,9 +61,8 @@ function applyMarks(text: string, marks: Node['marks'], key: string): React.Reac
   return node;
 }
 
-// Matches the limit the API enforces on stored documents. Rendering is
-// recursive, so without a ceiling a deep document takes the page down with a
-// stack overflow instead of just looking odd.
+// Matches the API's stored limit: rendering recurses, so a deep doc would
+// overflow the stack without a ceiling.
 const MAX_RENDER_DEPTH = 30;
 
 function renderNode(node: Node, key: string, depth = 0): React.ReactNode {

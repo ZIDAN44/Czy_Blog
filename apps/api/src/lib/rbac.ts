@@ -28,9 +28,8 @@ export function canEditPost(userRole: Role, userId: string, postAuthorId: string
   return false;
 }
 
-// Status transitions a contributor is permitted to perform on their own post.
-// Anything that results in publication (direct or scheduled) is forbidden —
-// they must submit for review and let an EDITOR/SUPER_ADMIN publish.
+// Statuses a contributor may set on their own post; anything that publishes
+// (direct or scheduled) is forbidden — they submit for review instead.
 const CONTRIBUTOR_STATUSES: ReadonlySet<PostStatus> = new Set([
   PostStatus.DRAFT,
   PostStatus.PENDING_REVIEW,
@@ -46,8 +45,7 @@ const AUTHOR_STATUSES: ReadonlySet<PostStatus> = new Set([
   PostStatus.ARCHIVED,
 ]);
 
-// Coerce a requested status to one the caller is actually allowed to set.
-// Returns null when the request must be rejected outright.
+// Coerce a requested status to one the caller may set; null means reject.
 export function coerceStatus(userRole: Role, requested: PostStatus): PostStatus | null {
   if (atLeast(userRole, Role.EDITOR)) return requested;
   if (userRole === Role.AUTHOR) {

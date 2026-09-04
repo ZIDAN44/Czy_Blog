@@ -1,16 +1,10 @@
 /**
  * Motion primitives — springs, momentum projection, rubber-banding.
  *
- * Everything a gesture touches animates with a spring rather than a CSS
- * transition, because a spring can be re-targeted mid-flight without losing
- * its velocity. That is what makes a moving thing feel grabbable: the user
- * can catch it, reverse it, and the motion never hard-cuts.
- *
- * Apple's two designer-facing parameters are used throughout instead of the
- * mass/stiffness/damping triplet:
- *   - `bounce`   — 0 is critically damped (no overshoot); higher overshoots.
- *   - `response` — seconds to reach the target. Not a duration; a spring has
- *                  no fixed duration, its settle time emerges from the params.
+ * Gestures animate with springs, not CSS transitions, so they can be re-targeted
+ * mid-flight without losing velocity — that's what makes a thing feel grabbable.
+ * Springs are described by Apple's two params: `bounce` (0 = critically damped)
+ * and `response` (seconds to reach target; a settle time, not a fixed duration).
  */
 
 export interface SpringConfig {
@@ -38,14 +32,8 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/* ------------------------------------------------------------------ *
- * Shared clock
- *
- * One requestAnimationFrame loop drives every live spring. Springs are
- * display-synced and read the same timestamp, so values that move together
- * stay in lockstep.
- * ------------------------------------------------------------------ */
-
+// Shared clock: one rAF loop drives every live spring off the same timestamp,
+// so values that move together stay in lockstep.
 type Ticker = (dt: number) => void;
 
 const tickers = new Set<Ticker>();
@@ -71,10 +59,6 @@ function removeTicker(tick: Ticker) {
   tickers.delete(tick);
 }
 
-/* ------------------------------------------------------------------ *
- * SpringValue
- * ------------------------------------------------------------------ */
-
 export interface SpringTarget extends SpringConfig {
   /** Initial velocity in units/s — hand the release velocity of a gesture here. */
   velocity?: number;
@@ -82,12 +66,8 @@ export interface SpringTarget extends SpringConfig {
   onRest?: () => void;
 }
 
-/**
- * A single animatable number.
- *
- * Deliberately imperative: it writes straight to the DOM through a subscriber
- * rather than through React state, so a drag never queues 60 renders a second.
- */
+// A single animatable number. Imperative on purpose: writes to the DOM through a
+// subscriber, not React state, so a drag never queues 60 renders a second.
 export class SpringValue {
   private value: number;
   private velocity = 0;
@@ -172,8 +152,7 @@ export class SpringValue {
     let remaining = frame;
     const { omega, zeta } = this;
 
-    // Semi-implicit Euler on a fixed substep. Stable at any frame rate,
-    // and re-targeting mid-flight is just a change to `this.target`.
+    // Semi-implicit Euler on a fixed substep: stable at any frame rate.
     while (remaining > 0) {
       const dt = Math.min(remaining, STEP);
       remaining -= dt;
@@ -204,44 +183,25 @@ export class SpringValue {
   }
 }
 
-/* ------------------------------------------------------------------ *
- * Gesture maths
- * ------------------------------------------------------------------ */
-
-/**
- * Where a flick would come to rest if it decelerated on its own.
- *
- * Snap to the target nearest *this* point rather than nearest the release
- * point — that is the difference between dragging a card and throwing it.
- * Exponential decay, matching UIScrollView; not the textbook v²/2a.
- */
+// Where a flick would come to rest on its own — snap to the target nearest that
+// point, not the release point. Exponential decay like UIScrollView, not v²/2a.
 export function project(velocity: number, decelerationRate = 0.998): number {
   return ((velocity / 1000) * decelerationRate) / (1 - decelerationRate);
 }
 
-/**
- * Progressive resistance past a boundary. A hard stop reads as frozen;
- * resistance reads as "still responding, but there is nothing more here".
- */
+// Progressive resistance past a boundary: a hard stop reads as frozen, resistance as responsive.
 export function rubberband(overshoot: number, dimension: number, constant = 0.55): number {
   if (dimension === 0) return 0;
   return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
 }
-
-/* ------------------------------------------------------------------ *
- * Velocity tracking
- * ------------------------------------------------------------------ */
 
 interface Sample {
   value: number;
   time: number;
 }
 
-/**
- * Rolling window of recent positions. The instantaneous delta between the last
- * two pointer events is too noisy to hand to a spring; a short window is what
- * makes the handoff from finger to animation invisible.
- */
+// Rolling window of recent positions: a single pointer delta is too noisy for a
+// spring, so a short window makes the finger-to-animation handoff invisible.
 export class VelocityTracker {
   private samples: Sample[] = [];
   private window: number;

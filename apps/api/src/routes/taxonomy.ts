@@ -46,9 +46,8 @@ export async function adminTaxonomyRoutes(app: FastifyInstance) {
   app.delete('/categories/:id', { preHandler: [requireRole(Role.EDITOR)] }, async (req, reply) => {
     const { id } = idParam.parse(req.params);
 
-    // Post.categoryId is a nullable FK with no cascade, so deleting a category
-    // that still has posts fails the constraint. Detach first, in the same
-    // transaction, so posts are never left pointing at a row that is going away.
+    // categoryId is a nullable FK with no cascade, so detach posts first in the
+    // same tx or the delete fails the constraint.
     const found = await prisma.$transaction(async (tx) => {
       const category = await tx.category.findUnique({ where: { id }, select: { id: true } });
       if (!category) return false;

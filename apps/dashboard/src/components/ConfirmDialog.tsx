@@ -59,12 +59,8 @@ const TONE_STYLES: Record<ConfirmTone, { btn: string; ring: string; icon: string
   },
 };
 
-/**
- * A confirmation is a speed bump, so it is reserved for decisions that are
- * genuinely destructive or hard to walk back. Everything routine reports
- * itself through a toast instead — asking about everything trains people to
- * click through without reading.
- */
+// A confirmation is a speed bump, reserved for destructive or hard-to-undo actions;
+// routine ones use a toast (asking about everything trains people to click through).
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<DialogState | null>(null);
   const [open, setOpen] = useState(false);
@@ -87,8 +83,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Answer immediately, then let the surface leave on its own time — the
-  // caller should never wait on an animation.
+  // Answer immediately; let the surface animate out on its own so the caller never waits.
   const close = useCallback((ok: boolean) => {
     resolverRef.current?.(ok);
     resolverRef.current = null;

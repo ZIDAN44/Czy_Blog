@@ -23,7 +23,7 @@ export default function LoginPage() {
       try {
         if (await needsBootstrap()) router.replace('/signup');
       } catch {
-        /* API might be down — let the user try anyway */
+        // API might be down — let the user try anyway.
       } finally {
         setChecking(false);
       }

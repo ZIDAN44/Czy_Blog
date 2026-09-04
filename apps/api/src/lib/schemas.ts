@@ -5,21 +5,14 @@ export const emailField = z
   .max(254) // RFC 5321 maximum path length
   .transform((s) => s.trim().toLowerCase());
 
-// bcrypt only considers the first 72 bytes, and every extra byte is work the
-// hash function does on an unauthenticated request. Bound both ends.
+// bcrypt only hashes the first 72 bytes; cap length so extra bytes aren't free work.
 export const passwordField = z.string().min(8).max(72);
 
-/**
- * URLs that will end up in an `href`/`src` rendered by a browser. `z.url()`
- * alone accepts anything `new URL()` parses — including `javascript:` and
- * `data:`, which is a stored-XSS primitive once the value is rendered.
- */
-// The hostname is deliberately unconstrained: `localhost` is a legitimate
-// image host in development and behind an internal reverse proxy.
+// URLs rendered into href/src. Restrict to http(s) — bare z.url() accepts
+// javascript:/data:, a stored-XSS primitive. Hostname is open on purpose (localhost).
 export const httpUrlField = z.url({ protocol: /^https?$/ }).max(2048);
 
-// Database identifiers are cuids: lowercase alphanumeric, no separators.
-// Bounding them keeps unbounded strings out of index lookups.
+// cuid ids: lowercase alphanumeric, bounded to keep unbounded strings out of lookups.
 const idField = z
   .string()
   .min(1)

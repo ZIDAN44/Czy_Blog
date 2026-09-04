@@ -13,8 +13,7 @@ const postSelect = {
   author: { select: { name: true } },
 } as const;
 
-// Derived from the select above rather than restated: a field added to one
-// and forgotten in the other is a compile error instead of a silent mismatch.
+// Derived from postSelect so a mismatch is a compile error, not a silent bug.
 type ContentPost = Prisma.PostGetPayload<{ select: typeof postSelect }>;
 
 function serializeContentPost(p: ContentPost) {
