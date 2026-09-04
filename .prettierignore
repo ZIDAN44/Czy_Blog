@@ -8,5 +8,7 @@ apps/*/.next
 next-env.d.ts
 **/next-env.d.ts
 apps/api/prisma/migrations
+docs/.vitepress/cache
+docs/.vitepress/dist
 package-lock.json
 *.md

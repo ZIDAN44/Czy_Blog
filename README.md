@@ -1,6 +1,6 @@
 # Czy Blog
 
-A self-hosted blog writer where you write and publish them so other people can read them
+A self-hosted blog writer where you write and publish
 
 ## Quick start
 
@@ -12,3 +12,7 @@ docker compose up -d
 ```
 
 Dashboard: `http://localhost:3000` API: `http://localhost:4000`
+
+## Documentation
+
+For detailed setup instructions, see the [Documentation Wiki](https://zidan44.github.io/Czy_Blog)

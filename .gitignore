@@ -27,6 +27,7 @@ coverage/
 .turbo/
 .cache/
 .eslintcache
+docs/.vitepress/cache/
 
 # Env files — keep .env.example committed; ignore actual values
 .env
