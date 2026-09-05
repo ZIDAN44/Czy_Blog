@@ -38,8 +38,8 @@ export default async function ReadIndex() {
         <h1 className="t-display">Latest writing</h1>
         <p className="t-secondary">
           {unreachable
-            ? 'A quiet corner of the internet where ideas get the time they deserve.'
-            : `${posts.length} published ${posts.length === 1 ? 'post' : 'posts'} · a quiet corner of the internet where ideas get the time they deserve.`}
+            ? 'Essays and notes on things worth thinking about.'
+            : `${posts.length} published ${posts.length === 1 ? 'post' : 'posts'} · essays and notes on things worth thinking about.`}
         </p>
       </header>
 

@@ -6,7 +6,7 @@ import { THEME_BOOTSTRAP } from '@/lib/theme';
 
 export const metadata: Metadata = {
   title: 'Czy Blog',
-  description: 'A quiet corner of the internet where ideas get the time they deserve.',
+  description: 'A personal blog of essays and notes on things worth thinking about.',
 };
 
 export const viewport: Viewport = {
@@ -34,12 +34,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <footer className="border-t border-line mt-auto">
             <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
               <p className="t-body text-content-secondary max-w-xl">
-                Czy Blog is a small place for slow thinking — long walks turned into paragraphs,
-                half-finished thoughts that found their footing, and the occasional thing worth
-                saying twice.
+                Czy Blog is a personal blog of essays and notes on things worth thinking about.
               </p>
               <div className="flex items-center justify-between gap-4 t-caption">
-                <span>© {new Date().getFullYear()} Czy Blog · made with care</span>
+                <span>© {new Date().getFullYear()} Czy Blog</span>
                 <a href="/rss.xml" className="hover:text-content">
                   Subscribe via RSS →
                 </a>

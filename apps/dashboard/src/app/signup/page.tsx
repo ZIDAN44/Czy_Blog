@@ -52,18 +52,20 @@ export default function SignupPage() {
           <span className="inline-block text-[10px] uppercase tracking-widest bg-white/10 border border-white/15 rounded-full px-2.5 py-1 font-medium">
             First-run setup
           </span>
-          <h2 className="t-display leading-tight">Claim your install!</h2>
+          <h2 className="t-display leading-tight">Set up your blog</h2>
           <p className="text-brand-muted t-body">
-            This first account becomes the super admin | From there, you can invite editors,
-            authors, contributors and manage your blog!
+            The first account you create becomes the super admin. From there you can invite editors,
+            authors, and contributors, and manage everything from one place.
           </p>
         </div>
       }
     >
       <form onSubmit={submit} className="w-full max-w-sm space-y-5 animate-slideUp">
         <div>
-          <h1 className="t-title">Create the super admin</h1>
-          <p className="t-secondary mt-1">You're the first user — this account gets full access.</p>
+          <h1 className="t-title">Create your admin account</h1>
+          <p className="t-secondary mt-1">
+            You're the first user, so this account gets full access.
+          </p>
         </div>
         <label className="block">
           <span className="t-caption font-medium text-content-secondary">Your name</span>

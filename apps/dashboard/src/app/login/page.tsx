@@ -50,9 +50,9 @@ export default function LoginPage() {
       }
       panel={
         <div className="relative space-y-4 max-w-sm">
-          <h2 className="t-title leading-snug">Welcome back!</h2>
+          <h2 className="t-title leading-snug">Welcome back</h2>
           <p className="text-brand-muted t-body">
-            Pick up where you left off | Finish that half-written draft | Start something new :D
+            Sign in to pick up your drafts, publish new posts, and manage your blog.
           </p>
         </div>
       }
@@ -64,7 +64,7 @@ export default function LoginPage() {
         </div>
         <div>
           <h1 className="t-title">Sign in</h1>
-          <p className="t-secondary mt-1">Use your email and password.</p>
+          <p className="t-secondary mt-1">Enter your email and password to continue.</p>
         </div>
         <label className="block">
           <span className="t-caption font-medium text-content-secondary">Email</span>
