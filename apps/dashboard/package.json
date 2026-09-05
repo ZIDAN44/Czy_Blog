@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start -p 3001",
     "lint": "next lint"
   },
   "dependencies": {
@@ -17,6 +17,7 @@
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",
     "dotenv": "^17.4.2",
+    "jose": "^6.2.12",
     "lowlight": "^3.3.0",
     "marked": "^18.0.4",
     "next": "^16.2.6",

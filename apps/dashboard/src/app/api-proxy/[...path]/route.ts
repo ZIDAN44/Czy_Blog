@@ -1,3 +1,6 @@
+import { cookies } from 'next/headers';
+import { TOKEN_COOKIE } from '@/lib/auth-cookie';
+
 // Runtime API proxy: browser code calls same-origin `/api-proxy/...` and this
 // forwards to process.env.API_URL, read at request time. (Server components call the API directly.)
 export const dynamic = 'force-dynamic';
@@ -44,6 +47,12 @@ async function forward(req: Request, path: string[]): Promise<Response> {
 
   const headers = new Headers(req.headers);
   for (const h of [...HOP_BY_HOP, ...CLIENT_SPOOFABLE]) headers.delete(h);
+
+  // Translate the httpOnly cookie into the Bearer the API wants; drop client auth.
+  headers.delete('authorization');
+  headers.delete('cookie');
+  const token = (await cookies()).get(TOKEN_COOKIE)?.value;
+  if (token) headers.set('authorization', `Bearer ${token}`);
 
   const init: RequestInit = {
     method: req.method,

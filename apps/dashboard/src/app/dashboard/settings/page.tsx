@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { api, setSession, type SessionUser } from '@/lib/api';
+import { changePassword, setSession } from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { errMsg } from '@/lib/utils';
 
@@ -23,16 +23,8 @@ export default function SettingsPage() {
     setError(null);
     setBusy(true);
     try {
-      // Changing the password invalidates this tab's token too, so swap in the
-      // fresh session the API returns instead of 401ing on the next request.
-      const session = await api<{ token: string; user: SessionUser }>(
-        '/api/v1/auth/change-password',
-        {
-          method: 'POST',
-          body: JSON.stringify({ currentPassword, newPassword }),
-        },
-      );
-      setSession(session.token, session.user);
+      // Password change rotates the token; the handler refreshes the cookie.
+      setSession(await changePassword(currentPassword, newPassword));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');

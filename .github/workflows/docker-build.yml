@@ -26,6 +26,9 @@ jobs:
           - app: api
             image: czyblog-api
             dockerfile: apps/api/Dockerfile
+          - app: web
+            image: czyblog-web
+            dockerfile: apps/web/Dockerfile
           - app: dashboard
             image: czyblog-dashboard
             dockerfile: apps/dashboard/Dockerfile

@@ -1,22 +1,24 @@
 # Introduction
 
-Czy Blog is a self-hosted blog platform. It has two parts that ship together:
+Czy Blog is a self-hosted blog platform with two front ends that ship together:
 
-- An **admin dashboard** where writers create, edit, and publish posts.
-- A **public reader** where visitors read published posts.
+- A **public reader** (`apps/web`) where visitors read published posts.
+- An **admin console** (`apps/dashboard`) where writers create, edit, and publish.
 
-Both are served by one Next.js app. A separate Fastify API handles data, auth,
-uploads, and scheduling, backed by Postgres. It targets a single blog with one or
-more writers — not multi-tenant or hosted SaaS. There is no public sign-up; an
-admin creates each account.
+They are **separate Next.js apps on separate origins**, so the reader contains no
+admin routes — a visitor can't reach a login or dashboard page even by editing the
+URL. A separate Fastify API handles data, auth, uploads, and scheduling, backed by
+Postgres. It targets a single blog with one or more writers — not multi-tenant or
+hosted SaaS. There is no public sign-up; an admin creates each account.
 
 ```mermaid
 flowchart LR
-    W["Writers"] --> NEXT["Next.js app :3000"]
-    R["Readers"] --> NEXT
-    NEXT --> API["API :4000"]
+    R["Readers"] --> WEB["Reader :3000"]
+    W["Writers"] --> DASH["Admin console :3001"]
+    WEB --> API["API :4000"]
+    DASH --> API
     API --> DB[("Postgres")]
-    API --- UP[["Uploads on disk"]]
+    API --- UP[["Uploads in S3"]]
     EXT["Other website"] -.->|API key| API
 ```
 
@@ -67,7 +69,7 @@ flowchart LR
 - JWT sessions for users; hashed API keys for headless consumers.
 - Rate limit: 300 requests/minute per IP, 10/minute on login and password change.
 - Migrations run automatically on API startup.
-- Docker images for both apps, run via Docker Compose.
+- Docker images for all three apps, run via Docker Compose.
 
 ## Not included
 

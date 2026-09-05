@@ -18,7 +18,7 @@ export function serializePost(p: PostWithRels) {
     status: p.status,
     published_date: p.publishedAt,
     scheduled_for: p.scheduledFor,
-    canonical_link: `${config.publicSiteUrl}/posts/${p.slug}`,
+    canonical_link: `${config.publicSiteUrl}/${p.slug}`,
     view_count: p.viewCount,
     author: {
       id: p.author.id,

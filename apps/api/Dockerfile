@@ -12,6 +12,7 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/dashboard/package.json apps/dashboard/package.json
+COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 
 # build: generate Prisma client + compile TypeScript

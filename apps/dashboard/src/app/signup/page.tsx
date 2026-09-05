@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthShell from '@/components/AuthShell';
-import { api, needsBootstrap, setSession, type SessionUser } from '@/lib/api';
+import { bootstrapAccount, needsBootstrap, setSession } from '@/lib/api';
 import { errMsg } from '@/lib/utils';
 
 export default function SignupPage() {
@@ -30,15 +30,7 @@ export default function SignupPage() {
     setBusy(true);
     setError(null);
     try {
-      const { token, user } = await api<{ token: string; user: SessionUser }>(
-        '/api/v1/auth/bootstrap',
-        {
-          method: 'POST',
-          body: JSON.stringify({ email, name, password }),
-          skipAuth: true,
-        },
-      );
-      setSession(token, user);
+      setSession(await bootstrapAccount({ email, name, password }));
       router.replace('/dashboard');
     } catch (e) {
       setError(errMsg(e, 'Sign-up failed'));

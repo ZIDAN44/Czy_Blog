@@ -37,13 +37,15 @@ features:
 
 ## The stack
 
-Two apps in one repo, both behind a single `.env`. The browser only ever talks to the
-dashboard, which proxies authenticated calls to the API — so the API need not be public.
+Three apps in one repo, all behind a single `.env`. The public reader and the admin
+console are separate apps on separate origins, so a reader can never reach an admin
+page. Both talk to the API server-side, so the API need not be public.
 
-| App              | Stack                       | Port | Purpose                           |
-| ---------------- | --------------------------- | ---- | --------------------------------- |
-| `apps/api`       | Fastify + Prisma + Postgres | 4000 | REST API, auth, media, scheduling |
-| `apps/dashboard` | Next.js + React + Tiptap    | 3000 | Admin dashboard and public reader |
+| App              | Stack                       | Port | Purpose                               |
+| ---------------- | --------------------------- | ---- | ------------------------------------- |
+| `apps/api`       | Fastify + Prisma + Postgres | 4000 | REST API, auth, media, scheduling     |
+| `apps/web`       | Next.js + React             | 3000 | Public reader site (blog + RSS)       |
+| `apps/dashboard` | Next.js + React + Tiptap    | 3001 | Admin console (write, publish, users) |
 
 ## Quick start
 
@@ -54,6 +56,6 @@ curl -sSL -o .env https://raw.githubusercontent.com/ZIDAN44/Czy_Blog/main/.env.e
 docker compose up -d
 ```
 
-Dashboard on `http://localhost:3000`, API on `http://localhost:4000`. The full walkthrough,
-including the bits you must change before exposing it, is in
-[production deployment](./deployment.md).
+Blog on `http://localhost:3000`, admin console on `http://localhost:3001`, API on
+`http://localhost:4000`. The full walkthrough, including the bits you must change before
+exposing it, is in [production deployment](./deployment.md).

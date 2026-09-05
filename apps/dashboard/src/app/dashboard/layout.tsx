@@ -2,14 +2,27 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Nav from '@/components/Nav';
-import { currentUser } from '@/lib/api';
+import { api, currentUser, setSession, type SessionUser } from '@/lib/api';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  // Middleware already verified the session cookie server-side before this route
+  // rendered and this is only about having the profile to render the nav. If the
+  // cached copy is gone, hydrate it from the API rather than bouncing the user.
   useEffect(() => {
-    if (!currentUser()) router.replace('/login');
-    else setReady(true);
+    if (currentUser()) {
+      setReady(true);
+      return;
+    }
+    (async () => {
+      try {
+        setSession(await api<SessionUser>('/api/v1/auth/me'));
+        setReady(true);
+      } catch {
+        router.replace('/login');
+      }
+    })();
   }, [router]);
   if (!ready) return null;
   return (

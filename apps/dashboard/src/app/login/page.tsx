@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthShell from '@/components/AuthShell';
 import Logo from '@/components/Logo';
-import { api, currentUser, needsBootstrap, setSession, type SessionUser } from '@/lib/api';
+import { login, needsBootstrap, setSession } from '@/lib/api';
 import { errMsg } from '@/lib/utils';
 
 export default function LoginPage() {
@@ -15,10 +15,6 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (currentUser()) {
-      router.replace('/dashboard');
-      return;
-    }
     (async () => {
       try {
         if (await needsBootstrap()) router.replace('/signup');
@@ -35,15 +31,7 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      const { token, user } = await api<{ token: string; user: SessionUser }>(
-        '/api/v1/auth/login',
-        {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-          skipAuth: true,
-        },
-      );
-      setSession(token, user);
+      setSession(await login(email, password));
       router.replace('/dashboard');
     } catch (e) {
       setError(errMsg(e, 'Sign-in failed'));

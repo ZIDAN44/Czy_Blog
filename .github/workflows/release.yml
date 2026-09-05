@@ -29,6 +29,7 @@ jobs:
           VERSION="${TAG#v}"
           NS="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
           API="${REGISTRY}/${NS}/czyblog-api"
+          WEB="${REGISTRY}/${NS}/czyblog-web"
           DASH="${REGISTRY}/${NS}/czyblog-dashboard"
 
           # Previous tag for the changelog compare link. Exclude the tag being
@@ -47,6 +48,8 @@ jobs:
             echo '```sh'
             echo "docker pull ${API}:${VERSION}"
             echo "docker pull ${API}:latest"
+            echo "docker pull ${WEB}:${VERSION}"
+            echo "docker pull ${WEB}:latest"
             echo "docker pull ${DASH}:${VERSION}"
             echo "docker pull ${DASH}:latest"
             echo '```'

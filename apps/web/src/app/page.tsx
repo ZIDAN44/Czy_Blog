@@ -58,7 +58,7 @@ export default async function ReadIndex() {
 
       {featured && (
         <Link
-          href={`/read/${featured.slug}`}
+          href={`/${featured.slug}`}
           className="block group rounded-2xl overflow-hidden border border-line bg-surface hover-lift animate-slideUp"
         >
           {featured.cover_image && (
@@ -92,7 +92,7 @@ export default async function ReadIndex() {
           {rest.map((p) => (
             <li key={p.id}>
               <Link
-                href={`/read/${p.slug}`}
+                href={`/${p.slug}`}
                 className="block group h-full p-6 rounded-2xl border border-line hover:border-line-strong hover-lift"
               >
                 <h2 className="t-heading group-hover:text-accent transition-colors">{p.title}</h2>

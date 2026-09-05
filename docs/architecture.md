@@ -1,19 +1,27 @@
 # Architecture
 
-Three services: Next.js app (dashboard + reader), Fastify API, and Postgres.
-The browser only talks to the Next.js app on the same origin and the dashboard proxies
-authenticated calls to the API, so the API need not be exposed publicly.
+Four services: the **reader** (`apps/web`) and the **admin console** (`apps/dashboard`)
+are separate Next.js apps on separate origins, plus the Fastify API and Postgres. Neither
+front-end exposes the API to the browser — the reader fetches server-side, the console
+proxies through its own origin — so the API need not be public. Splitting the two front
+ends means the reader app contains no admin routes at all: a reader cannot reach a login
+or dashboard page even by editing the URL.
 
 ```mermaid
 flowchart TB
     subgraph Browser
-        DASH["Dashboard (client SPA)<br/>React, Tiptap"]
         READ["Reader pages<br/>(server-rendered HTML)"]
+        DASH["Console (client SPA)<br/>React, Tiptap"]
         IMG["&lt;img&gt; tags"]
     end
-    subgraph Next["apps/dashboard · :3000"]
-        PROXY["/api-proxy/*<br/>(forwards, reads API_URL)"]
+    subgraph Web["apps/web · :3000 (public)"]
         SC["Reader server components"]
+        RSS["/rss.xml passthrough"]
+    end
+    subgraph Dash["apps/dashboard · :3001 (admin)"]
+        MW["middleware (cookie gate)"]
+        PROXY["/api-proxy/*<br/>(forwards, reads API_URL)"]
+        AUTHR["/api/auth/* (sets httpOnly cookie)"]
     end
     subgraph API["apps/api · :4000"]
         ROUTES["/api/v1/* routes"]
@@ -25,10 +33,14 @@ flowchart TB
     S3[["Private S3 bucket"]]
     EXT["Headless site"]
 
-    DASH -->|"XHR /api-proxy (Bearer JWT)"| PROXY
-    PROXY -->|forward| ROUTES
     READ -.->|"rendered by"| SC
     SC -->|"fetch (API_URL)"| ROUTES
+    RSS -->|"fetch (API_URL)"| ROUTES
+    DASH -->|"XHR /api-proxy (cookie)"| MW
+    MW --> PROXY
+    PROXY -->|"forward (Bearer from cookie)"| ROUTES
+    DASH -->|"login/logout"| AUTHR
+    AUTHR -->|forward| ROUTES
     IMG -->|"GET /media/:key"| MEDIA
     MEDIA -->|"GetObject"| S3
     ROUTES --> AUTHP
@@ -39,19 +51,27 @@ flowchart TB
     EXT -->|x-api-key| ROUTES
 ```
 
-Two distinct browser paths: the **dashboard** is a client SPA that calls the API
-through the same-origin proxy with a Bearer token; the **reader** is server-rendered
-(its server components fetch the API directly via `API_URL`), and the browser then
-loads images from the API's `/media` route, which streams them from the private bucket.
+Two distinct front ends: the **console** is a client SPA whose requests carry an httpOnly
+session cookie; its own origin proxies them to the API with a Bearer token. The **reader**
+is server-rendered (its server components fetch the API directly via `API_URL`); the
+browser then loads images from the API's `/media` route, which streams them from the
+private bucket, and reaches the feed via the reader's same-origin `/rss.xml` passthrough.
 
-## The proxy
+## Auth cookie + proxy (console)
 
-Browser code calls `/api-proxy/...` (same origin). The
-[proxy route](../apps/dashboard/src/app/api-proxy/[...path]/route.ts) reads
-`API_URL` at request time and forwards the call. Result: the API needs no public
-exposure, browser requests stay same-origin, and one image works in any environment
-because the API host is read at runtime, not baked into the bundle. The session JWT
-is kept in `localStorage` and sent as `Authorization: Bearer <token>`.
+The session JWT lives in an **httpOnly cookie** the browser's JavaScript cannot read, so
+an XSS bug can't exfiltrate it. Sign-in/out go through the console's
+[`/api/auth/*` route handlers](../apps/dashboard/src/app/api/auth), which call the API and
+move the returned token into the cookie. [`middleware.ts`](../apps/dashboard/src/middleware.ts)
+verifies the cookie (signature, issuer, audience, expiry) before any admin route renders,
+and redirects unauthenticated visitors to `/login`.
+
+Other console calls go to `/api-proxy/...` (same origin). The
+[proxy route](../apps/dashboard/src/app/api-proxy/[...path]/route.ts) reads the cookie and
+`API_URL` at request time, translates the cookie into `Authorization: Bearer <token>`
+server-side, and forwards the call. Result: the token never touches client JavaScript, the
+API needs no public exposure, and the API host is read at runtime rather than baked into
+the bundle.
 
 One exception: uploaded images are loaded by the browser from the API's `/media`
 route (via `MEDIA_PUBLIC_BASE_URL`), not through the dashboard proxy. That route is
@@ -68,8 +88,8 @@ sequenceDiagram
     participant A as API
     participant D as Postgres
 
-    B->>N: PATCH /api-proxy/.../posts/:id (Bearer JWT)
-    N->>A: forwarded
+    B->>N: PATCH /api-proxy/.../posts/:id (httpOnly cookie)
+    N->>A: forwarded (cookie → Bearer JWT)
     A->>A: verify JWT
     A->>D: reload user role + token version
     A->>A: RBAC check
@@ -128,10 +148,13 @@ erDiagram
 
 Two credential types:
 
-| Credential        | Used by            | Header                        | Verified in    |
+| Credential        | Used by            | Header (at the API)           | Verified in    |
 | ----------------- | ------------------ | ----------------------------- | -------------- |
-| JWT (7-day)       | Dashboard users    | `Authorization: Bearer <jwt>` | `authenticate` |
+| JWT (7-day)       | Console users      | `Authorization: Bearer <jwt>` | `authenticate` |
 | API key (`czk_…`) | Headless consumers | `x-api-key: <key>`            | `apiKeyAuth`   |
+
+The console holds the JWT in an httpOnly cookie; its proxy turns that into the Bearer
+header above. The API also verifies the same JWT settings in the console's middleware.
 
 JWTs are HS256 with a pinned issuer and audience. Passwords are bcrypt at
 `BCRYPT_ROUNDS`. API keys are shown once; only a SHA-256 hash and 12-char prefix
@@ -204,5 +227,7 @@ Both run inside the API process ([scheduler.ts](../apps/api/src/scheduler.ts)):
 - API: Fastify 5, Prisma 7 (`@prisma/adapter-pg`), Zod 4, `@fastify/jwt`,
   `@fastify/helmet`, `@fastify/multipart` (10 MB), `@fastify/rate-limit`
   (300/min), `@aws-sdk/client-s3`, bcryptjs.
-- Dashboard: Next.js 16 (standalone), React 19, Tiptap 3, Tailwind 4, `marked`.
+- Reader (`apps/web`): Next.js 16 (standalone), React 19, Tailwind 4 — public, read-only.
+- Console (`apps/dashboard`): Next.js 16 (standalone), React 19, Tiptap 3, Tailwind 4,
+  `marked`, `jose` (cookie verification).
 - Database: Postgres 18.

@@ -1,22 +1,6 @@
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { currentUser, needsBootstrap } from '@/lib/api';
+import { redirect } from 'next/navigation';
 
+// Admin console front door; middleware sends unauthenticated visitors to /login.
 export default function Index() {
-  const router = useRouter();
-  useEffect(() => {
-    (async () => {
-      if (currentUser()) {
-        router.replace('/dashboard');
-        return;
-      }
-      try {
-        router.replace((await needsBootstrap()) ? '/signup' : '/login');
-      } catch {
-        router.replace('/login');
-      }
-    })();
-  }, [router]);
-  return null;
+  redirect('/dashboard');
 }

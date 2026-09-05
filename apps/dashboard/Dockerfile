@@ -12,6 +12,7 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/dashboard/package.json apps/dashboard/package.json
+COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 
 # build: compile the Next.js app
@@ -24,7 +25,7 @@ RUN npm run build:dashboard
 FROM base AS runner
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    PORT=3000 \
+    PORT=3001 \
     HOSTNAME=0.0.0.0 \
     API_URL=http://localhost:4000
 WORKDIR /app
@@ -35,6 +36,6 @@ COPY --from=build /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
 
 USER node
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["node", "apps/dashboard/server.js"]

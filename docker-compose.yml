@@ -39,6 +39,24 @@ services:
     ports:
       - "${API_PORT:-4000}:${API_PORT:-4000}"
 
+  # Public reader site — its own app on its own origin, no admin code.
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: czyblog-web
+    container_name: czyblog-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file: .env
+    environment:
+      # Reader pages fetch published content from the API over the compose network.
+      API_URL: http://api:${API_PORT:-4000}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+  # Admin console — separate app, separate origin, gated by middleware.
   dashboard:
     build:
       context: .
@@ -54,7 +72,7 @@ services:
       # over the compose network, not the host loopback.
       API_URL: http://api:${API_PORT:-4000}
     ports:
-      - "${DASHBOARD_PORT:-3000}:3000"
+      - "${DASHBOARD_PORT:-3001}:3001"
 
 volumes:
   czyblog_pgdata:

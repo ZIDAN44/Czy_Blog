@@ -1,7 +1,7 @@
 # Development Setup (Node.js)
 
-Runs the API and dashboard on your machine with hot reload, using Docker only for
-Postgres. For a deployed stack, see [deployment](deployment.md).
+Runs the API, the public reader, and the admin console on your machine with hot
+reload, using Docker only for Postgres. For a deployed stack, see [deployment](deployment.md).
 
 ## Prerequisites
 
@@ -11,9 +11,10 @@ Postgres. For a deployed stack, see [deployment](deployment.md).
 Layout:
 
 ```text
-apps/api         Fastify + Prisma  (:4000)
-apps/dashboard   Next.js           (:3000)
-package.json     root scripts orchestrate both
+apps/api         Fastify + Prisma       (:4000)
+apps/web         Next.js public reader  (:3000)
+apps/dashboard   Next.js admin console  (:3001)
+package.json     root scripts orchestrate all three
 ```
 
 ## 1. Install
@@ -52,12 +53,12 @@ Other Prisma scripts: `db:deploy` (apply existing), `db:generate` (client only),
 ## 5. Run
 
 ```bash
-npm run dev            # API + dashboard together
-# or: npm run dev:api / npm run dev:dashboard
+npm run dev            # API + reader + console together
+# or: npm run dev:api / npm run dev:web / npm run dev:dashboard
 ```
 
-Dashboard `http://localhost:3000`, API `http://localhost:4000`
-(`/health` to check).
+Blog `http://localhost:3000`, admin console `http://localhost:3001`, API
+`http://localhost:4000` (`/health` to check).
 
 ## 6. First user
 
@@ -67,34 +68,37 @@ curl -X POST http://localhost:4000/api/v1/auth/bootstrap \
   -d '{"email":"dev@example.com","password":"devpassword","name":"Dev"}'
 ```
 
-Or use the dashboard sign-up screen, then log in at `/login`.
+Or use the admin console's first-run sign-up at `http://localhost:3001/signup`, then
+log in at `http://localhost:3001/login`.
 
 ## Scripts (root)
 
-| Command                            | Action                         |
-| ---------------------------------- | ------------------------------ |
-| `npm run dev`                      | API + dashboard, hot reload.   |
-| `npm run build` / `start`          | Build / run production output. |
-| `npm run db:up` / `db:down`        | Start / stop Postgres.         |
-| `npm run db:migrate` / `db:deploy` | Migrations.                    |
-| `npm run lint` / `lint:fix`        | ESLint.                        |
-| `npm run format` / `format:check`  | Prettier.                      |
+| Command                            | Action                          |
+| ---------------------------------- | ------------------------------- |
+| `npm run dev`                      | API + reader + console, reload. |
+| `npm run build` / `start`          | Build / run production output.  |
+| `npm run db:up` / `db:down`        | Start / stop Postgres.          |
+| `npm run db:migrate` / `db:deploy` | Migrations.                     |
+| `npm run lint` / `lint:fix`        | ESLint.                         |
+| `npm run format` / `format:check`  | Prettier.                       |
 
 ## Layout
 
-| Path                             | Contents                                    |
-| -------------------------------- | ------------------------------------------- |
-| `apps/api/src/app.ts`            | Plugins, route registration, error handler. |
-| `apps/api/src/routes/`           | Route handlers.                             |
-| `apps/api/src/plugins/auth.ts`   | JWT + API-key auth.                         |
-| `apps/api/src/lib/rbac.ts`       | Roles and permissions.                      |
-| `apps/api/src/lib/schemas.ts`    | Shared field validators (id, slug, url).    |
-| `apps/api/src/lib/content.ts`    | Post-document validation.                   |
-| `apps/api/src/scheduler.ts`      | Publish + media-cleanup jobs.               |
-| `apps/api/prisma/schema.prisma`  | Schema and migrations.                      |
-| `apps/dashboard/src/app/`        | Next.js routes.                             |
-| `apps/dashboard/src/components/` | Editor, forms, nav.                         |
-| `apps/dashboard/src/lib/api.ts`  | Client API helper, session.                 |
+| Path                               | Contents                                    |
+| ---------------------------------- | ------------------------------------------- |
+| `apps/api/src/app.ts`              | Plugins, route registration, error handler. |
+| `apps/api/src/routes/`             | Route handlers.                             |
+| `apps/api/src/plugins/auth.ts`     | JWT + API-key auth.                         |
+| `apps/api/src/lib/rbac.ts`         | Roles and permissions.                      |
+| `apps/api/src/lib/schemas.ts`      | Shared field validators (id, slug, url).    |
+| `apps/api/src/lib/content.ts`      | Post-document validation.                   |
+| `apps/api/src/scheduler.ts`        | Publish + media-cleanup jobs.               |
+| `apps/api/prisma/schema.prisma`    | Schema and migrations.                      |
+| `apps/web/src/app/`                | Public reader routes (`/`, `/[slug]`, RSS). |
+| `apps/dashboard/src/app/`          | Admin console routes + auth/proxy handlers. |
+| `apps/dashboard/src/middleware.ts` | Cookie gate for the console.                |
+| `apps/dashboard/src/components/`   | Editor, forms, nav.                         |
+| `apps/dashboard/src/lib/api.ts`    | Client API helper, session.                 |
 
 Schema change: edit `schema.prisma`, run `npm run db:migrate`. The generated client
 lands in `apps/api/src/generated/prisma` (committed). Reset the dev DB:

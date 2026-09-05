@@ -16,7 +16,12 @@ export const viewport: Viewport = {
   // theme-color is a single unmediated meta below, resolved by the bootstrap script (see THEME_BOOTSTRAP).
 };
 
+// Read PUBLIC_SITE_URL per request so prebuilt images pick it up at runtime.
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Exposed to the client (site.ts) for links back to the reader.
+  const siteUrl = process.env.PUBLIC_SITE_URL ?? 'http://localhost:3000';
   return (
     // No webfont round-trip — the platform font already carries optical sizing and tracking.
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
@@ -28,6 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           id="theme-bootstrap"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }}
+        />
+        {/* Runtime reader origin for client links; runs before hydration. */}
+        <Script
+          id="site-url"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: `window.__SITE_URL__=${JSON.stringify(siteUrl)}` }}
         />
       </head>
       <body>

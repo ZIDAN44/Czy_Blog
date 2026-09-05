@@ -1,0 +1,1215 @@
+@import 'tailwindcss';
+
+/* ==================================================================
+   Foundations
+
+   Three ideas run through this file:
+
+   1. Type changes shape with size. Tracking and leading are never one
+      value for all sizes — large text tightens, small text opens up.
+   2. Chrome is a translucent material floating over content, not an
+      opaque strip that eats a fixed band of the screen.
+   3. Every colour is semantic. Nothing says "slate-500"; things say
+      "secondary content", and the theme decides what that looks like.
+      That is what makes light and dark one design rather than two.
+
+   Motion that a user can touch lives in TypeScript (see lib/motion.ts),
+   because a CSS transition cannot be grabbed and reversed mid-flight.
+   What stays here is the non-interruptible kind: hover, press, focus,
+   and one-shot entrances.
+   ================================================================== */
+
+@theme {
+  /* Easing — for state changes only, never for anything gesture-driven. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-soft: cubic-bezier(0.64, 0, 0.78, 0); /* mirror of the above */
+  --ease-out-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Semantic colour -------------------------------------------
+     Light is defined here as the base. The dark blocks further down
+     redefine these same names, so no component has to know which
+     theme it is in. */
+
+  /* Grounds */
+  --color-canvas: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f1f5f9;
+  /* Transient fills — hover and pressed states over any ground. */
+  --color-fill-hover: rgba(15, 23, 42, 0.05);
+  --color-fill-active: rgba(15, 23, 42, 0.09);
+
+  /* Content, in descending emphasis */
+  --color-content: #0f172a;
+  --color-content-secondary: #5a6675;
+  /* Tertiary carries placeholder text, so it clears 4.5:1 on the surface
+     rather than the 3:1 that would be enough for a decorative glyph. */
+  --color-content-tertiary: #6b7480;
+
+  /* Lines */
+  --color-line: rgba(15, 23, 42, 0.08);
+  --color-line-strong: rgba(15, 23, 42, 0.14);
+
+  /* The reversed pair — a selected segment, an avatar, a solid marker. */
+  --color-inverse: #0f172a;
+  --color-on-inverse: #ffffff;
+
+  /* Accent. In dark this lightens: the same indigo on a dark ground
+     would fall below a readable contrast. */
+  --color-accent: #4f46e5;
+  --color-accent-strong: #4338ca;
+  --color-accent-soft: #eef2ff;
+  --color-accent-content: #4338ca;
+
+  /* Status. Each is a soft ground plus the content colour that sits on it. */
+  --color-danger: #dc2626;
+  --color-danger-soft: #fef2f2;
+  --color-danger-content: #b91c1c;
+  --color-warning: #f59e0b;
+  --color-warning-soft: #fffbeb;
+  --color-warning-content: #92400e;
+  --color-success: #059669;
+  --color-success-soft: #ecfdf5;
+  --color-success-content: #166534;
+  --color-info-soft: #e0f2fe;
+  --color-info-content: #075985;
+
+  /* The sign-in brand panel. On a light page it is a dark slab for contrast;
+     on a dark page it lifts *above* the canvas instead, because elevation
+     reverses in the dark — a surface separates by getting lighter, not by
+     casting a shadow nothing can see. */
+  --color-brand-panel: #0b1020;
+  --color-on-brand: #f8fafc;
+  --color-brand-muted: #c3cad8;
+
+  /* The platform font ships optical sizing, tracking tables and legibility
+     tuning that a webfont round-trip cannot beat — and costs no latency. */
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI',
+    system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas,
+    monospace;
+}
+
+:root {
+  /* --- Materials -------------------------------------------------
+     Weight encodes hierarchy: thick separates structural regions,
+     thin draws attention to interactive things. Never stack thin on
+     thin — legibility collapses. */
+  --material-thin: rgba(255, 255, 255, 0.62);
+  --material-regular: rgba(255, 255, 255, 0.76);
+  --material-thick: rgba(255, 255, 255, 0.9);
+  --material-card: rgba(255, 255, 255, 0.86);
+
+  --blur-thin: blur(20px) saturate(180%);
+  --blur-regular: blur(28px) saturate(180%);
+  --blur-thick: blur(40px) saturate(180%);
+
+  /* The bright top edge is light catching the lip of the material. */
+  --material-sheen: rgba(255, 255, 255, 0.55);
+  --material-edge: rgba(255, 255, 255, 0.6);
+
+  /* Bigger surfaces read as thicker: more blur, deeper shadow. */
+  --shadow-chip: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 1px 0 rgba(15, 23, 42, 0.02), 0 8px 24px -14px rgba(15, 23, 42, 0.14);
+  --shadow-raised: 0 2px 4px rgba(15, 23, 42, 0.04), 0 18px 40px -18px rgba(15, 23, 42, 0.22);
+  --shadow-modal: 0 4px 8px rgba(15, 23, 42, 0.06), 0 40px 80px -24px rgba(15, 23, 42, 0.36);
+  --shadow-edge: 0 8px 24px -20px rgba(15, 23, 42, 0.5);
+
+  --scrim: rgba(15, 23, 42, 0.32);
+  --scrollbar: rgba(15, 23, 42, 0.2);
+  --scrollbar-hover: rgba(15, 23, 42, 0.32);
+  --scrollbar-active: rgba(15, 23, 42, 0.45);
+  --selection: rgba(99, 102, 241, 0.22);
+
+  --canvas-tint-1: rgba(99, 102, 241, 0.08);
+  --canvas-tint-2: rgba(14, 165, 233, 0.06);
+
+  --focus-ring: 0 0 0 3.5px rgba(99, 102, 241, 0.32);
+
+  /* Gradient buttons keep their own light-to-dark ramp so they read as
+     lit objects rather than flat blocks. */
+  --accent-gradient: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);
+  --warning-gradient: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  --danger-gradient: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+  --success-gradient: linear-gradient(180deg, #059669 0%, #047857 100%);
+  --code-bg: #0f172a;
+  --code-content: #e2e8f0;
+
+  --radius-chip: 0.625rem;
+  --radius-card: 1rem;
+  --radius-surface: 1.25rem;
+
+  /* --- Pointer ---------------------------------------------------
+     Drawn by the OS from a static image, never followed by a script:
+     a JS cursor is a frame behind the real one, and that lag is the
+     exact thing that makes an interface stop feeling direct. Ink and
+     halo swap with the theme so the pointer stays legible on either
+     ground. */
+
+  --cursor-default:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%23ffffff' stroke='%23ffffff' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 2L4 18.6L8.2 14.7L11 21L13.9 19.8L11.2 13.7L16.6 13.7Z'/%3E%3C/g%3E%3Cg fill='%230f172a' stroke='%230f172a' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 2L4 18.6L8.2 14.7L11 21L13.9 19.8L11.2 13.7L16.6 13.7Z'/%3E%3C/g%3E%3C/svg%3E")
+      4 2,
+    default;
+  --cursor-pointer:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%23ffffff' stroke='%23ffffff' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='7.4' y='2.6' width='3.2' height='11' rx='1.6'/%3E%3Crect x='11.5' y='7.8' width='3' height='5.8' rx='1.5'/%3E%3Crect x='15.1' y='8.8' width='3' height='4.8' rx='1.5'/%3E%3Crect x='6.9' y='11' width='11.9' height='10' rx='3'/%3E%3Crect x='3.8' y='11.4' width='2.8' height='6.4' rx='1.4' transform='rotate(-30 5.2 14.6)'/%3E%3C/g%3E%3Cg fill='%230f172a' stroke='%230f172a' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='7.4' y='2.6' width='3.2' height='11' rx='1.6'/%3E%3Crect x='11.5' y='7.8' width='3' height='5.8' rx='1.5'/%3E%3Crect x='15.1' y='8.8' width='3' height='4.8' rx='1.5'/%3E%3Crect x='6.9' y='11' width='11.9' height='10' rx='3'/%3E%3Crect x='3.8' y='11.4' width='2.8' height='6.4' rx='1.4' transform='rotate(-30 5.2 14.6)'/%3E%3C/g%3E%3C/svg%3E")
+      9 3,
+    pointer;
+  --cursor-text:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='4.2' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M9.2 3.6h5.6M12 3.6v16.8M9.2 20.4h5.6'/%3E%3C/g%3E%3Cg fill='none' stroke='%230f172a' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M9.2 3.6h5.6M12 3.6v16.8M9.2 20.4h5.6'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    text;
+  --cursor-grab:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%23ffffff' stroke='%23ffffff' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='6.6' width='2.5' height='7.4' rx='1.25'/%3E%3Crect x='12.2' y='5.4' width='2.5' height='8.6' rx='1.25'/%3E%3Crect x='17.6' y='6.8' width='2.5' height='7.2' rx='1.25'/%3E%3Crect x='6.4' y='11.4' width='13.9' height='9.2' rx='3.1'/%3E%3Crect x='2.9' y='11.8' width='2.6' height='6.2' rx='1.3' transform='rotate(-30 4.2 14.9)'/%3E%3C/g%3E%3Cg fill='%230f172a' stroke='%230f172a' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='6.6' width='2.5' height='7.4' rx='1.25'/%3E%3Crect x='12.2' y='5.4' width='2.5' height='8.6' rx='1.25'/%3E%3Crect x='17.6' y='6.8' width='2.5' height='7.2' rx='1.25'/%3E%3Crect x='6.4' y='11.4' width='13.9' height='9.2' rx='3.1'/%3E%3Crect x='2.9' y='11.8' width='2.6' height='6.2' rx='1.3' transform='rotate(-30 4.2 14.9)'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    grab;
+  --cursor-grabbing:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%23ffffff' stroke='%23ffffff' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='9.4' width='2.5' height='4.6' rx='1.25'/%3E%3Crect x='12.2' y='8.8' width='2.5' height='5.2' rx='1.25'/%3E%3Crect x='17.6' y='9.6' width='2.5' height='4.4' rx='1.25'/%3E%3Crect x='6.4' y='11.8' width='13.9' height='8.8' rx='3.1'/%3E%3Crect x='4.2' y='13.6' width='6.6' height='2.6' rx='1.3' transform='rotate(-14 7.5 14.9)'/%3E%3C/g%3E%3Cg fill='%230f172a' stroke='%230f172a' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='9.4' width='2.5' height='4.6' rx='1.25'/%3E%3Crect x='12.2' y='8.8' width='2.5' height='5.2' rx='1.25'/%3E%3Crect x='17.6' y='9.6' width='2.5' height='4.4' rx='1.25'/%3E%3Crect x='6.4' y='11.8' width='13.9' height='8.8' rx='3.1'/%3E%3Crect x='4.2' y='13.6' width='6.6' height='2.6' rx='1.3' transform='rotate(-14 7.5 14.9)'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    grabbing;
+  --cursor-not-allowed:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='4.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='7.6'/%3E%3Cpath d='M6.6 17.4L17.4 6.6'/%3E%3C/g%3E%3Cg fill='none' stroke='%230f172a' stroke-width='2.0' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='7.6'/%3E%3Cpath d='M6.6 17.4L17.4 6.6'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    not-allowed;
+
+  color-scheme: light;
+}
+
+/* --- Dark ---------------------------------------------------------
+   Dark is not light inverted. Elevation flips: on a light ground a
+   raised surface gets darker via shadow, on a dark ground it gets
+   lighter via its own fill, and shadows only deepen the separation.
+   Materials darken, edges become light instead of dark, and the
+   accent lifts to stay legible.
+
+   Two selectors, deliberately. The media query serves the system
+   setting and steps aside the moment someone picks light explicitly;
+   the attribute rule follows it so an explicit dark choice wins in
+   both directions.
+   ------------------------------------------------------------------ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-canvas: #0b0d10;
+    --color-surface: #16191e;
+    --color-surface-sunken: #101317;
+    --color-fill-hover: rgba(255, 255, 255, 0.07);
+    --color-fill-active: rgba(255, 255, 255, 0.12);
+
+    --color-content: #e9ebef;
+    --color-content-secondary: #a4abb8;
+    --color-content-tertiary: #7b8391;
+
+    --color-line: rgba(255, 255, 255, 0.09);
+    --color-line-strong: rgba(255, 255, 255, 0.17);
+
+    --color-inverse: #e9ebef;
+    --color-on-inverse: #0b0d10;
+
+    --color-accent: #818cf8;
+    --color-accent-strong: #a5b4fc;
+    --color-accent-soft: rgba(129, 140, 248, 0.16);
+    --color-accent-content: #c7d2fe;
+
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248, 113, 113, 0.14);
+    --color-danger-content: #fca5a5;
+    --color-warning: #fbbf24;
+    --color-warning-soft: rgba(251, 191, 36, 0.14);
+    --color-warning-content: #fcd34d;
+    --color-success: #34d399;
+    --color-success-soft: rgba(52, 211, 153, 0.14);
+    --color-success-content: #6ee7b7;
+    --color-info-soft: rgba(56, 189, 248, 0.14);
+    --color-info-content: #7dd3fc;
+
+    --color-brand-panel: #171a21;
+    --color-on-brand: #f1f3f7;
+    --color-brand-muted: #a4abb8;
+
+    --material-thin: rgba(24, 27, 33, 0.66);
+    --material-regular: rgba(20, 23, 28, 0.76);
+    --material-thick: rgba(26, 29, 36, 0.88);
+    --material-card: rgba(24, 27, 33, 0.82);
+
+    --material-sheen: rgba(255, 255, 255, 0.12);
+    --material-edge: rgba(255, 255, 255, 0.08);
+
+    --shadow-chip: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px -14px rgba(0, 0, 0, 0.8);
+    --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 40px -18px rgba(0, 0, 0, 0.9);
+    --shadow-modal: 0 4px 8px rgba(0, 0, 0, 0.4), 0 40px 80px -24px rgba(0, 0, 0, 0.95);
+    --shadow-edge: 0 8px 24px -20px rgba(0, 0, 0, 0.9);
+
+    --scrim: rgba(0, 0, 0, 0.55);
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --scrollbar-hover: rgba(255, 255, 255, 0.28);
+    --scrollbar-active: rgba(255, 255, 255, 0.42);
+    --selection: rgba(129, 140, 248, 0.32);
+
+    --canvas-tint-1: rgba(99, 102, 241, 0.16);
+    --canvas-tint-2: rgba(14, 165, 233, 0.1);
+
+    --focus-ring: 0 0 0 3.5px rgba(129, 140, 248, 0.45);
+
+    --accent-gradient: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+    --warning-gradient: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+    --danger-gradient: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+    --success-gradient: linear-gradient(180deg, #047857 0%, #065f46 100%);
+    --code-bg: #0a0c0f;
+    --code-content: #e2e8f0;
+
+    --cursor-default:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%2305070a' stroke='%2305070a' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 2L4 18.6L8.2 14.7L11 21L13.9 19.8L11.2 13.7L16.6 13.7Z'/%3E%3C/g%3E%3Cg fill='%23f2f4f8' stroke='%23f2f4f8' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 2L4 18.6L8.2 14.7L11 21L13.9 19.8L11.2 13.7L16.6 13.7Z'/%3E%3C/g%3E%3C/svg%3E")
+        4 2,
+      default;
+    --cursor-pointer:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%2305070a' stroke='%2305070a' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='7.4' y='2.6' width='3.2' height='11' rx='1.6'/%3E%3Crect x='11.5' y='7.8' width='3' height='5.8' rx='1.5'/%3E%3Crect x='15.1' y='8.8' width='3' height='4.8' rx='1.5'/%3E%3Crect x='6.9' y='11' width='11.9' height='10' rx='3'/%3E%3Crect x='3.8' y='11.4' width='2.8' height='6.4' rx='1.4' transform='rotate(-30 5.2 14.6)'/%3E%3C/g%3E%3Cg fill='%23f2f4f8' stroke='%23f2f4f8' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='7.4' y='2.6' width='3.2' height='11' rx='1.6'/%3E%3Crect x='11.5' y='7.8' width='3' height='5.8' rx='1.5'/%3E%3Crect x='15.1' y='8.8' width='3' height='4.8' rx='1.5'/%3E%3Crect x='6.9' y='11' width='11.9' height='10' rx='3'/%3E%3Crect x='3.8' y='11.4' width='2.8' height='6.4' rx='1.4' transform='rotate(-30 5.2 14.6)'/%3E%3C/g%3E%3C/svg%3E")
+        9 3,
+      pointer;
+    --cursor-text:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%2305070a' stroke-width='4.2' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M9.2 3.6h5.6M12 3.6v16.8M9.2 20.4h5.6'/%3E%3C/g%3E%3Cg fill='none' stroke='%23f2f4f8' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M9.2 3.6h5.6M12 3.6v16.8M9.2 20.4h5.6'/%3E%3C/g%3E%3C/svg%3E")
+        12 12,
+      text;
+    --cursor-grab:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%2305070a' stroke='%2305070a' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='6.6' width='2.5' height='7.4' rx='1.25'/%3E%3Crect x='12.2' y='5.4' width='2.5' height='8.6' rx='1.25'/%3E%3Crect x='17.6' y='6.8' width='2.5' height='7.2' rx='1.25'/%3E%3Crect x='6.4' y='11.4' width='13.9' height='9.2' rx='3.1'/%3E%3Crect x='2.9' y='11.8' width='2.6' height='6.2' rx='1.3' transform='rotate(-30 4.2 14.9)'/%3E%3C/g%3E%3Cg fill='%23f2f4f8' stroke='%23f2f4f8' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='6.6' width='2.5' height='7.4' rx='1.25'/%3E%3Crect x='12.2' y='5.4' width='2.5' height='8.6' rx='1.25'/%3E%3Crect x='17.6' y='6.8' width='2.5' height='7.2' rx='1.25'/%3E%3Crect x='6.4' y='11.4' width='13.9' height='9.2' rx='3.1'/%3E%3Crect x='2.9' y='11.8' width='2.6' height='6.2' rx='1.3' transform='rotate(-30 4.2 14.9)'/%3E%3C/g%3E%3C/svg%3E")
+        12 12,
+      grab;
+    --cursor-grabbing:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%2305070a' stroke='%2305070a' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='9.4' width='2.5' height='4.6' rx='1.25'/%3E%3Crect x='12.2' y='8.8' width='2.5' height='5.2' rx='1.25'/%3E%3Crect x='17.6' y='9.6' width='2.5' height='4.4' rx='1.25'/%3E%3Crect x='6.4' y='11.8' width='13.9' height='8.8' rx='3.1'/%3E%3Crect x='4.2' y='13.6' width='6.6' height='2.6' rx='1.3' transform='rotate(-14 7.5 14.9)'/%3E%3C/g%3E%3Cg fill='%23f2f4f8' stroke='%23f2f4f8' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='9.4' width='2.5' height='4.6' rx='1.25'/%3E%3Crect x='12.2' y='8.8' width='2.5' height='5.2' rx='1.25'/%3E%3Crect x='17.6' y='9.6' width='2.5' height='4.4' rx='1.25'/%3E%3Crect x='6.4' y='11.8' width='13.9' height='8.8' rx='3.1'/%3E%3Crect x='4.2' y='13.6' width='6.6' height='2.6' rx='1.3' transform='rotate(-14 7.5 14.9)'/%3E%3C/g%3E%3C/svg%3E")
+        12 12,
+      grabbing;
+    --cursor-not-allowed:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%2305070a' stroke-width='4.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='7.6'/%3E%3Cpath d='M6.6 17.4L17.4 6.6'/%3E%3C/g%3E%3Cg fill='none' stroke='%23f2f4f8' stroke-width='2.0' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='7.6'/%3E%3Cpath d='M6.6 17.4L17.4 6.6'/%3E%3C/g%3E%3C/svg%3E")
+        12 12,
+      not-allowed;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-canvas: #0b0d10;
+  --color-surface: #16191e;
+  --color-surface-sunken: #101317;
+  --color-fill-hover: rgba(255, 255, 255, 0.07);
+  --color-fill-active: rgba(255, 255, 255, 0.12);
+
+  --color-content: #e9ebef;
+  --color-content-secondary: #a4abb8;
+  --color-content-tertiary: #7b8391;
+
+  --color-line: rgba(255, 255, 255, 0.09);
+  --color-line-strong: rgba(255, 255, 255, 0.17);
+
+  --color-inverse: #e9ebef;
+  --color-on-inverse: #0b0d10;
+
+  --color-accent: #818cf8;
+  --color-accent-strong: #a5b4fc;
+  --color-accent-soft: rgba(129, 140, 248, 0.16);
+  --color-accent-content: #c7d2fe;
+
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.14);
+  --color-danger-content: #fca5a5;
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgba(251, 191, 36, 0.14);
+  --color-warning-content: #fcd34d;
+  --color-success: #34d399;
+  --color-success-soft: rgba(52, 211, 153, 0.14);
+  --color-success-content: #6ee7b7;
+  --color-info-soft: rgba(56, 189, 248, 0.14);
+  --color-info-content: #7dd3fc;
+
+  --color-brand-panel: #171a21;
+  --color-on-brand: #f1f3f7;
+  --color-brand-muted: #a4abb8;
+
+  --material-thin: rgba(24, 27, 33, 0.66);
+  --material-regular: rgba(20, 23, 28, 0.76);
+  --material-thick: rgba(26, 29, 36, 0.88);
+  --material-card: rgba(24, 27, 33, 0.82);
+
+  --material-sheen: rgba(255, 255, 255, 0.12);
+  --material-edge: rgba(255, 255, 255, 0.08);
+
+  --shadow-chip: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px -14px rgba(0, 0, 0, 0.8);
+  --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 40px -18px rgba(0, 0, 0, 0.9);
+  --shadow-modal: 0 4px 8px rgba(0, 0, 0, 0.4), 0 40px 80px -24px rgba(0, 0, 0, 0.95);
+  --shadow-edge: 0 8px 24px -20px rgba(0, 0, 0, 0.9);
+
+  --scrim: rgba(0, 0, 0, 0.55);
+  --scrollbar: rgba(255, 255, 255, 0.16);
+  --scrollbar-hover: rgba(255, 255, 255, 0.28);
+  --scrollbar-active: rgba(255, 255, 255, 0.42);
+  --selection: rgba(129, 140, 248, 0.32);
+
+  --canvas-tint-1: rgba(99, 102, 241, 0.16);
+  --canvas-tint-2: rgba(14, 165, 233, 0.1);
+
+  --focus-ring: 0 0 0 3.5px rgba(129, 140, 248, 0.45);
+
+  --accent-gradient: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+  --warning-gradient: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  --danger-gradient: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+  --success-gradient: linear-gradient(180deg, #047857 0%, #065f46 100%);
+  --code-bg: #0a0c0f;
+  --code-content: #e2e8f0;
+
+  --cursor-default:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%2305070a' stroke='%2305070a' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 2L4 18.6L8.2 14.7L11 21L13.9 19.8L11.2 13.7L16.6 13.7Z'/%3E%3C/g%3E%3Cg fill='%23f2f4f8' stroke='%23f2f4f8' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M4 2L4 18.6L8.2 14.7L11 21L13.9 19.8L11.2 13.7L16.6 13.7Z'/%3E%3C/g%3E%3C/svg%3E")
+      4 2,
+    default;
+  --cursor-pointer:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%2305070a' stroke='%2305070a' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='7.4' y='2.6' width='3.2' height='11' rx='1.6'/%3E%3Crect x='11.5' y='7.8' width='3' height='5.8' rx='1.5'/%3E%3Crect x='15.1' y='8.8' width='3' height='4.8' rx='1.5'/%3E%3Crect x='6.9' y='11' width='11.9' height='10' rx='3'/%3E%3Crect x='3.8' y='11.4' width='2.8' height='6.4' rx='1.4' transform='rotate(-30 5.2 14.6)'/%3E%3C/g%3E%3Cg fill='%23f2f4f8' stroke='%23f2f4f8' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='7.4' y='2.6' width='3.2' height='11' rx='1.6'/%3E%3Crect x='11.5' y='7.8' width='3' height='5.8' rx='1.5'/%3E%3Crect x='15.1' y='8.8' width='3' height='4.8' rx='1.5'/%3E%3Crect x='6.9' y='11' width='11.9' height='10' rx='3'/%3E%3Crect x='3.8' y='11.4' width='2.8' height='6.4' rx='1.4' transform='rotate(-30 5.2 14.6)'/%3E%3C/g%3E%3C/svg%3E")
+      9 3,
+    pointer;
+  --cursor-text:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%2305070a' stroke-width='4.2' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M9.2 3.6h5.6M12 3.6v16.8M9.2 20.4h5.6'/%3E%3C/g%3E%3Cg fill='none' stroke='%23f2f4f8' stroke-width='1.8' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M9.2 3.6h5.6M12 3.6v16.8M9.2 20.4h5.6'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    text;
+  --cursor-grab:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%2305070a' stroke='%2305070a' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='6.6' width='2.5' height='7.4' rx='1.25'/%3E%3Crect x='12.2' y='5.4' width='2.5' height='8.6' rx='1.25'/%3E%3Crect x='17.6' y='6.8' width='2.5' height='7.2' rx='1.25'/%3E%3Crect x='6.4' y='11.4' width='13.9' height='9.2' rx='3.1'/%3E%3Crect x='2.9' y='11.8' width='2.6' height='6.2' rx='1.3' transform='rotate(-30 4.2 14.9)'/%3E%3C/g%3E%3Cg fill='%23f2f4f8' stroke='%23f2f4f8' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='6.6' width='2.5' height='7.4' rx='1.25'/%3E%3Crect x='12.2' y='5.4' width='2.5' height='8.6' rx='1.25'/%3E%3Crect x='17.6' y='6.8' width='2.5' height='7.2' rx='1.25'/%3E%3Crect x='6.4' y='11.4' width='13.9' height='9.2' rx='3.1'/%3E%3Crect x='2.9' y='11.8' width='2.6' height='6.2' rx='1.3' transform='rotate(-30 4.2 14.9)'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    grab;
+  --cursor-grabbing:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='%2305070a' stroke='%2305070a' stroke-width='2.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='9.4' width='2.5' height='4.6' rx='1.25'/%3E%3Crect x='12.2' y='8.8' width='2.5' height='5.2' rx='1.25'/%3E%3Crect x='17.6' y='9.6' width='2.5' height='4.4' rx='1.25'/%3E%3Crect x='6.4' y='11.8' width='13.9' height='8.8' rx='3.1'/%3E%3Crect x='4.2' y='13.6' width='6.6' height='2.6' rx='1.3' transform='rotate(-14 7.5 14.9)'/%3E%3C/g%3E%3Cg fill='%23f2f4f8' stroke='%23f2f4f8' stroke-width='0' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.8' y='9.4' width='2.5' height='4.6' rx='1.25'/%3E%3Crect x='12.2' y='8.8' width='2.5' height='5.2' rx='1.25'/%3E%3Crect x='17.6' y='9.6' width='2.5' height='4.4' rx='1.25'/%3E%3Crect x='6.4' y='11.8' width='13.9' height='8.8' rx='3.1'/%3E%3Crect x='4.2' y='13.6' width='6.6' height='2.6' rx='1.3' transform='rotate(-14 7.5 14.9)'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    grabbing;
+  --cursor-not-allowed:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%2305070a' stroke-width='4.4' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='7.6'/%3E%3Cpath d='M6.6 17.4L17.4 6.6'/%3E%3C/g%3E%3Cg fill='none' stroke='%23f2f4f8' stroke-width='2.0' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='7.6'/%3E%3Cpath d='M6.6 17.4L17.4 6.6'/%3E%3C/g%3E%3C/svg%3E")
+      12 12,
+    not-allowed;
+
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Spacing scales with the user's text size rather than fighting it. */
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  background: var(--color-canvas);
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, var(--canvas-tint-1), transparent 60%),
+    radial-gradient(800px 500px at -10% 110%, var(--canvas-tint-2), transparent 60%),
+    var(--color-canvas);
+  color: var(--color-content);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  /* Nothing on the input path that is not essential: kill the 300ms tap wait. */
+  touch-action: manipulation;
+}
+
+/* Switching theme is a large, full-viewport brightness change — the one
+   thing that must never happen as a hard cut. The attribute is set only
+   for the length of the swap, so ordinary interactions keep their own
+   timings and nothing else is slowed down by a blanket transition. */
+:root[data-theme-swap] *,
+:root[data-theme-swap] *::before,
+:root[data-theme-swap] *::after {
+  transition:
+    background-color 280ms var(--ease-out-soft),
+    border-color 280ms var(--ease-out-soft),
+    color 280ms var(--ease-out-soft),
+    fill 280ms var(--ease-out-soft),
+    box-shadow 280ms var(--ease-out-soft) !important;
+}
+
+/* ==================================================================
+   Typography
+
+   Tracking is size-specific. Large display text reads too loose as it
+   grows, so it tightens; small text opens up slightly to stay legible.
+   Leading moves inversely to size.
+   ================================================================== */
+
+.t-display {
+  font-size: clamp(2rem, 1.5rem + 2.2vw, 3rem);
+  line-height: 1.06;
+  letter-spacing: -0.026em;
+  font-weight: 600;
+}
+
+.t-title {
+  font-size: clamp(1.5rem, 1.3rem + 1vw, 1.875rem);
+  line-height: 1.14;
+  letter-spacing: -0.021em;
+  font-weight: 600;
+}
+
+.t-heading {
+  font-size: 1.125rem;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+  font-weight: 600;
+}
+
+.t-subheading {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  letter-spacing: -0.006em;
+  font-weight: 600;
+}
+
+.t-body {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+.t-secondary {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  letter-spacing: 0.002em;
+  color: var(--color-content-secondary);
+}
+
+.t-caption {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  letter-spacing: 0.012em;
+  color: var(--color-content-secondary);
+}
+
+/* Section labels. Uppercase needs the extra tracking to stay readable. */
+.t-label {
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-content-secondary);
+}
+
+/* Over a translucent surface flat grey text dissolves. Vibrancy keeps it
+   readable: more contrast, slightly heavier, a touch more tracking. */
+.vibrant-secondary {
+  color: var(--color-content-secondary);
+  font-weight: 500;
+  letter-spacing: 0.004em;
+}
+
+/* ==================================================================
+   Response
+
+   Feedback belongs on the press, and it is instant. Waiting for the
+   click to acknowledge an interaction feels dead.
+   ================================================================== */
+
+a,
+button,
+summary,
+[role='button'] {
+  transition:
+    color 140ms var(--ease-out-soft),
+    background-color 140ms var(--ease-out-soft),
+    border-color 140ms var(--ease-out-soft),
+    box-shadow 140ms var(--ease-out-soft),
+    opacity 140ms var(--ease-out-soft);
+}
+
+button:not(:disabled),
+[role='button'],
+a,
+.pressable {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: 140ms;
+  transition-timing-function: var(--ease-out-soft);
+}
+
+button:active:not(:disabled),
+[role='button']:active,
+.pressable:active {
+  transform: scale(0.97);
+  /* Faster in than out: the press reads as immediate, the release as settling. */
+  transition-duration: 90ms;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 10px;
+  transition: box-shadow 160ms var(--ease-out-soft);
+}
+
+::selection {
+  background: var(--selection);
+}
+
+/* --- Scrollbar -----------------------------------------------------
+   Floating chrome, like everything else that sits over content: a
+   translucent thumb on an empty track, tinted with the theme's ink so
+   it belongs to the page rather than to the operating system.
+
+   The thumb thickens under the pointer instead of only changing colour.
+   Growing toward the cursor telegraphs "this is the part you grab"
+   before the drag starts. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 999px;
+  /* Transparent border is the thumb's inset: shrinking it is what makes
+     the thumb appear to grow. */
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+  border-width: 3px;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-active);
+  border-width: 2px;
+  background-clip: padding-box;
+}
+
+/* --- Pointer -------------------------------------------------------
+   Only where there is a real pointer to draw. A coarse pointer has no
+   cursor to theme, and paying for these images there would be waste. */
+@media (hover: hover) and (pointer: fine) {
+  body {
+    cursor: var(--cursor-default);
+  }
+
+  a[href],
+  button:not(:disabled),
+  [role='button'],
+  summary,
+  select,
+  label[for],
+  input[type='checkbox'],
+  input[type='radio'],
+  .pressable {
+    cursor: var(--cursor-pointer);
+  }
+
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  textarea,
+  .ProseMirror,
+  [contenteditable='true'] {
+    cursor: var(--cursor-text);
+  }
+
+  /* Redefining the Tailwind utilities rather than changing every call
+     site: the markup keeps saying "grab", it just draws our hand. */
+  .cursor-grab {
+    cursor: var(--cursor-grab);
+  }
+  .cursor-grabbing,
+  .active\:cursor-grabbing:active {
+    cursor: var(--cursor-grabbing);
+  }
+
+  button:disabled,
+  .btn:disabled,
+  [aria-disabled='true'] {
+    cursor: var(--cursor-not-allowed);
+  }
+}
+
+/* ==================================================================
+   Materials
+   ================================================================== */
+
+.material-thin {
+  background: var(--material-thin);
+  backdrop-filter: var(--blur-thin);
+}
+
+.material-regular {
+  background: var(--material-regular);
+  backdrop-filter: var(--blur-regular);
+}
+
+.material-thick {
+  background: var(--material-thick);
+  backdrop-filter: var(--blur-thick);
+}
+
+/* Floating chrome: content scrolls underneath rather than being pushed by it. */
+.chrome {
+  background: var(--material-regular);
+  backdrop-filter: var(--blur-regular);
+  border-bottom: 1px solid transparent;
+  transition:
+    border-color 240ms var(--ease-out-soft),
+    background-color 240ms var(--ease-out-soft),
+    box-shadow 240ms var(--ease-out-soft);
+}
+
+/* A scroll edge effect, not a permanent 1px rule: the separation appears
+   only once content is actually underneath the floating chrome. */
+.chrome[data-scrolled='true'] {
+  border-bottom-color: var(--color-line);
+  box-shadow: var(--shadow-edge);
+}
+
+.card {
+  background: var(--material-card);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* Modal surfaces are large, so they carry more blur and a deeper shadow. */
+.surface {
+  background: var(--material-thick);
+  backdrop-filter: var(--blur-thick);
+  border: 1px solid var(--material-edge);
+  border-top-color: var(--material-sheen);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-modal);
+}
+
+/* Dimming scrim. Pairs with a modal task; a parallel, non-blocking panel
+   uses translucency and offset instead, so the flow is not broken. */
+.scrim {
+  background: var(--scrim);
+  backdrop-filter: blur(3px);
+}
+
+/* ==================================================================
+   Controls
+   ================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  letter-spacing: -0.003em;
+  border-radius: var(--radius-chip);
+  padding: 0.5rem 0.875rem;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition:
+    background-color 160ms var(--ease-out-soft),
+    border-color 160ms var(--ease-out-soft),
+    color 160ms var(--ease-out-soft),
+    box-shadow 160ms var(--ease-out-soft),
+    transform 140ms var(--ease-out-soft),
+    filter 160ms var(--ease-out-soft);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 90ms;
+}
+
+.btn-primary {
+  background: var(--accent-gradient);
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+    0 1px 2px rgba(67, 56, 202, 0.4);
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-line-strong);
+  color: var(--color-content);
+  box-shadow: var(--shadow-chip);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-content));
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-content-secondary);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-fill-hover);
+  color: var(--color-content);
+}
+
+.btn-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-content);
+  border-color: color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger) 18%, var(--color-danger-soft));
+}
+
+.btn-warn {
+  background: var(--warning-gradient);
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 1px 2px rgba(180, 83, 9, 0.4);
+}
+.btn-warn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+/* Solid tone buttons for a dialog's committing action. They keep a
+   light-to-dark ramp in both themes so white type stays legible on them —
+   a flat fill would have to lighten in the dark and lose the label. */
+.btn-tone-danger {
+  background: var(--danger-gradient);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+.btn-tone-success {
+  background: var(--success-gradient);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+.btn-tone-danger:hover:not(:disabled),
+.btn-tone-success:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface);
+  border-radius: var(--radius-chip);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-content);
+  transition:
+    border-color 140ms var(--ease-out-soft),
+    box-shadow 140ms var(--ease-out-soft),
+    background-color 140ms var(--ease-out-soft);
+}
+.input::placeholder {
+  color: var(--color-content-tertiary);
+}
+.input:hover:not(:focus) {
+  border-color: color-mix(in srgb, var(--color-line-strong) 70%, var(--color-content));
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+/* The native calendar and select glyphs follow color-scheme, which is set
+   per theme — without it they stay black on a dark field. */
+.input option {
+  background: var(--color-surface);
+  color: var(--color-content);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.pill-draft {
+  background: var(--color-surface-sunken);
+  color: var(--color-content-secondary);
+}
+.pill-pending {
+  background: var(--color-warning-soft);
+  color: var(--color-warning-content);
+}
+.pill-scheduled {
+  background: var(--color-info-soft);
+  color: var(--color-info-content);
+}
+.pill-published {
+  background: var(--color-success-soft);
+  color: var(--color-success-content);
+}
+.pill-archived {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-content);
+}
+
+/* Inline messages — the quiet end of the four kinds of feedback. */
+.note {
+  border-radius: var(--radius-chip);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+}
+.note-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-content);
+  border-color: color-mix(in srgb, var(--color-danger) 22%, transparent);
+}
+.note-warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning-content);
+  border-color: color-mix(in srgb, var(--color-warning) 26%, transparent);
+}
+
+/* Row that reveals its actions on hover — but never hides them from
+   keyboards or touch, where there is no hover to reveal them with. */
+.row-actions {
+  opacity: 0;
+  transition: opacity 160ms var(--ease-out-soft);
+}
+.group:hover .row-actions,
+.group:focus-within .row-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .row-actions {
+    opacity: 1;
+  }
+}
+
+/* ==================================================================
+   Long-form typography (editor + reader share one voice)
+   ================================================================== */
+
+.ProseMirror {
+  min-height: 24rem;
+  outline: none;
+  color: var(--color-content);
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-content-tertiary);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.ProseMirror h1 {
+  font-size: 1.875rem;
+  line-height: 1.15;
+  letter-spacing: -0.022em;
+  font-weight: 700;
+  margin: 1.75rem 0 0.75rem;
+}
+.ProseMirror h2 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.018em;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+}
+.ProseMirror h3 {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  letter-spacing: -0.012em;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+}
+.ProseMirror p {
+  margin: 0.75rem 0;
+  line-height: 1.7;
+}
+.ProseMirror ul {
+  @apply list-disc pl-6 my-2;
+}
+.ProseMirror ol {
+  @apply list-decimal pl-6 my-2;
+}
+.ProseMirror li {
+  margin: 0.25rem 0;
+}
+.ProseMirror blockquote {
+  border-left: 2px solid var(--color-accent);
+  padding-left: 1rem;
+  font-style: italic;
+  color: var(--color-content-secondary);
+  margin: 1rem 0;
+}
+.ProseMirror pre {
+  background: var(--code-bg);
+  color: var(--code-content);
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.ProseMirror code {
+  background: var(--color-surface-sunken);
+  color: var(--color-content);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+.ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+.ProseMirror img {
+  @apply rounded-xl my-5 max-w-full h-auto;
+}
+.ProseMirror a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  text-underline-offset: 2px;
+}
+.ProseMirror hr {
+  border-color: var(--color-line);
+  margin: 2rem 0;
+}
+
+/* ==================================================================
+   Entrances
+
+   One-shot only. Nothing here is grabbable, so a keyframe is honest;
+   anything a finger can catch is sprung in TypeScript instead.
+   ================================================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 220ms var(--ease-out-soft);
+}
+.animate-slideUp {
+  animation: riseIn 300ms var(--ease-out-soft) both;
+}
+
+/* Children arrive in reading order, close enough together to read as one
+   movement rather than a queue. */
+.stagger > * {
+  animation: riseIn 340ms var(--ease-out-soft) both;
+}
+.stagger > *:nth-child(1) {
+  animation-delay: 15ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 45ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 75ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 105ms;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 135ms;
+}
+.stagger > *:nth-child(6) {
+  animation-delay: 165ms;
+}
+.stagger > *:nth-child(7) {
+  animation-delay: 195ms;
+}
+.stagger > *:nth-child(8) {
+  animation-delay: 225ms;
+}
+.stagger > *:nth-child(n + 9) {
+  animation-delay: 255ms;
+}
+
+.skeleton {
+  background: linear-gradient(
+      90deg,
+      var(--color-fill-hover) 0%,
+      var(--color-fill-active) 40%,
+      var(--color-fill-hover) 80%
+    )
+    var(--color-surface-sunken);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 6px;
+}
+
+.hover-lift {
+  transition:
+    transform 220ms var(--ease-out-soft),
+    box-shadow 220ms var(--ease-out-soft),
+    border-color 220ms var(--ease-out-soft);
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-raised);
+}
+
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 220ms var(--ease-out-soft);
+}
+.link-underline:hover {
+  background-size: 100% 1px;
+}
+
+/* Elements about to move get a compositing hint, and only those. */
+.will-move {
+  will-change: transform;
+}
+
+/* ==================================================================
+   Accessibility preferences
+
+   Reduced motion is not "no feedback" — it is the same information
+   delivered without vestibular movement. These blocks come last so
+   they win over both themes.
+   ================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  /* Keep the cross-fade — it still says "this changed" — drop the travel. */
+  .animate-fadeIn,
+  .animate-slideUp,
+  .stagger > * {
+    animation: fadeIn 180ms ease both !important;
+    transform: none !important;
+  }
+  .hover-lift:hover,
+  button:active:not(:disabled),
+  [role='button']:active,
+  .pressable:active,
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
+  /* A theme swap still eases: an instant full-screen brightness jump is
+     exactly the kind of change this setting exists to soften. */
+  :root[data-theme-swap] *,
+  :root[data-theme-swap] *::before,
+  :root[data-theme-swap] *::after {
+    transition-duration: 280ms !important;
+    transition-property: background-color, border-color, color, fill, box-shadow !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  /* :root:root outruns :root[data-theme='dark'] — a preference must not be
+     silently dropped just because someone also picked a theme by hand. */
+  :root:root {
+    --material-thin: var(--color-surface);
+    --material-regular: var(--color-surface);
+    --material-thick: var(--color-surface);
+    --material-card: var(--color-surface);
+    --blur-thin: none;
+    --blur-regular: none;
+    --blur-thick: none;
+  }
+  .card,
+  .surface,
+  .chrome,
+  .input,
+  .btn-secondary {
+    backdrop-filter: none;
+    background-color: var(--color-surface);
+  }
+  .scrim {
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--color-canvas) 25%, rgba(0, 0, 0, 0.7));
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root:root {
+    /* Back to the system pointer: a cursor image cannot honour the OS's
+       own size and contrast settings, and the person who asked for more
+       contrast is the likeliest to be relying on them. */
+    --cursor-default: default;
+    --cursor-pointer: pointer;
+    --cursor-text: text;
+    --cursor-grab: grab;
+    --cursor-grabbing: grabbing;
+    --cursor-not-allowed: not-allowed;
+    --color-line: color-mix(in srgb, var(--color-content) 32%, transparent);
+    --color-line-strong: color-mix(in srgb, var(--color-content) 48%, transparent);
+    --color-content-secondary: color-mix(in srgb, var(--color-content) 82%, transparent);
+    --color-content-tertiary: color-mix(in srgb, var(--color-content) 65%, transparent);
+    --material-thin: var(--color-surface);
+    --material-regular: var(--color-surface);
+    --material-thick: var(--color-surface);
+    --material-card: var(--color-surface);
+  }
+  .card,
+  .surface,
+  .chrome {
+    border-color: var(--color-line-strong);
+  }
+  .btn-ghost {
+    border-color: var(--color-line);
+  }
+}

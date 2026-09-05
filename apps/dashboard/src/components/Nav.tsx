@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import Logo from '@/components/Logo';
 import { Popover, Sheet } from '@/components/Overlay';
 import ThemeToggle from '@/components/ThemeToggle';
-import { clearSession, currentUser, type SessionUser } from '@/lib/api';
+import { clearSession, currentUser, logout, type SessionUser } from '@/lib/api';
+import { siteUrl } from '@/lib/site';
 import { useIsCompact, useMovingIndicator, useScrolled } from '@/lib/useMotion';
 import { initials } from '@/lib/utils';
 
@@ -26,7 +27,9 @@ export default function Nav() {
     setUser(currentUser());
   }, []);
 
-  function signOut() {
+  async function signOut() {
+    // Clear the server cookie first, then the cached profile.
+    await logout();
     clearSession();
     router.replace('/login');
   }
@@ -65,13 +68,14 @@ export default function Nav() {
         <NavRail links={links} activeHref={activeHref} className="hidden md:flex" />
 
         <div className="ml-auto flex items-center gap-2">
-          <Link
-            href="/read"
+          <a
+            href={siteUrl()}
             className="hidden sm:inline-flex btn btn-ghost text-xs"
             target="_blank"
+            rel="noreferrer"
           >
             View site ↗
-          </Link>
+          </a>
           <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => !o)}
@@ -144,15 +148,16 @@ function AccountMenu({
       >
         Account settings
       </Link>
-      <Link
-        href="/read"
+      <a
+        href={siteUrl()}
         role="menuitem"
         target="_blank"
+        rel="noreferrer"
         onClick={onNavigate}
         className="block t-body px-3 py-2 rounded-lg hover:bg-fill-hover text-content sm:hidden"
       >
         View site ↗
-      </Link>
+      </a>
       <button
         role="menuitem"
         onClick={onSignOut}

@@ -3,13 +3,14 @@
 There is exactly one env file: `.env` at the repo root (copy
 [`.env.example`](../.env.example)). The apps have none of their own.
 
-Four consumers read it:
+Consumers that read it:
 
 | Consumer       | How                                                                        |
 | -------------- | -------------------------------------------------------------------------- |
-| Docker Compose | `env_file: .env` on the `api` and `dashboard` services.                    |
+| Docker Compose | `env_file: .env` on the `api`, `web`, and `dashboard` services.            |
 | API            | [`apps/api/src/env.ts`](../apps/api/src/env.ts) loads it by absolute path. |
 | Prisma CLI     | [`apps/api/prisma.config.ts`](../apps/api/prisma.config.ts), same path.    |
+| Web            | [`apps/web/next.config.mjs`](../apps/web/next.config.mjs).                 |
 | Dashboard      | [`apps/dashboard/next.config.mjs`](../apps/dashboard/next.config.mjs).     |
 
 Resolution is by absolute path, not `process.cwd()`, so it works from the repo
@@ -47,7 +48,7 @@ Read in [config.ts](../apps/api/src/config.ts).
 | `API_HOST`                     | No        | `0.0.0.0`                           | Bind address. Falls back to `HOST`.                               |
 | `CORS_ORIGINS`                 | No        | `http://localhost:3000`             | Comma-separated origins. `*` is refused in production.            |
 | `TRUST_PROXY`                  | No        | `false`                             | See below. `false` \| `true` \| hop count \| ip/cidr list.        |
-| `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`             | Base for post links in RSS / content API.                         |
+| `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`             | The reader's origin: post links in RSS / content API.             |
 | `S3_BUCKET`                    | Yes       | —                                   | Bucket uploads are stored in.                                     |
 | `S3_REGION`                    | No        | `us-east-1`                         | Bucket region.                                                    |
 | `S3_ACCESS_KEY_ID`             | No        | —                                   | Access key.                                                       |
@@ -62,8 +63,8 @@ Read in [config.ts](../apps/api/src/config.ts).
 Generate a secret: `openssl rand -base64 48`.
 
 `API_PORT`/`API_HOST` carry the prefix because a bare `PORT`/`HOST` in a shared
-file would also be picked up by the dashboard's Next.js server. The unprefixed
-pair is still read as a fallback, for platforms that inject `PORT` themselves.
+file would also be picked up by the Next.js apps. The unprefixed pair is still
+read as a fallback, for platforms that inject `PORT` themselves.
 
 ### `TRUST_PROXY`
 
@@ -73,16 +74,19 @@ on, a directly reachable API lets any client send its own `X-Forwarded-For` and
 get a fresh rate-limit bucket per request. Behind a reverse proxy, set it to the
 proxy's address or CIDR (`TRUST_PROXY=10.0.0.0/8`) rather than `true`.
 
-## Dashboard — `apps/dashboard`
+## Web + Dashboard — `apps/web`, `apps/dashboard`
 
-| Variable         | Default                 | Purpose                                                                                      |
-| ---------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
-| `API_URL`        | `http://localhost:4000` | Where the proxy forwards. Read at request time. Compose overrides it with `http://api:4000`. |
-| `DASHBOARD_PORT` | `3000`                  | Host port published by Compose. Local dev is fixed at 3000 by the `dev`/`start` scripts.     |
+| Variable         | Default                 | Purpose                                    |
+| ---------------- | ----------------------- | ------------------------------------------ |
+| `API_URL`        | `http://localhost:4000` | Where both apps reach the API server-side. |
+| `WEB_PORT`       | `3000`                  | Host port for the public reader.           |
+| `DASHBOARD_PORT` | `3001`                  | Host port for the admin console.           |
 
-Browser→dashboard calls are same-origin (`/api-proxy/...`); dashboard→API uses
-`API_URL` over the internal network. The API needs a published port only if
-headless clients reach it directly.
+The reader (`apps/web`) fetches published content from the API server-side and
+exposes no admin routes. The console (`apps/dashboard`) is same-origin
+(`/api-proxy/...`) and reaches the API over `API_URL`; it reads `PUBLIC_SITE_URL`
+at request time for links back to the reader. The API needs a published port only
+if headless clients reach it directly.
 
 ## Minimal production `.env`
 
@@ -92,7 +96,7 @@ POSTGRES_PASSWORD=<strong-password>
 POSTGRES_DB=czyblog
 
 JWT_SECRET=<openssl rand -base64 48>
-CORS_ORIGINS=https://blog.example.com
+CORS_ORIGINS=https://blog.example.com,https://admin.example.com
 TRUST_PROXY=<proxy ip/cidr, if any>
 PUBLIC_SITE_URL=https://blog.example.com
 

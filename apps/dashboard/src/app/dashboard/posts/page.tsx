@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, type PostStatus } from '@/lib/api';
+import { postUrl } from '@/lib/site';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 import SegmentedControl, { type Segment } from '@/components/SegmentedControl';
@@ -186,9 +187,14 @@ export default function PostsPage() {
               <span className={`pill ${STATUS_PILL[p.status]}`}>{p.status.replace('_', ' ')}</span>
               <div className="row-actions flex items-center gap-1">
                 {p.status === 'PUBLISHED' && (
-                  <Link href={`/read/${p.slug}`} className="btn btn-ghost text-xs" target="_blank">
+                  <a
+                    href={postUrl(p.slug)}
+                    className="btn btn-ghost text-xs"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     View
-                  </Link>
+                  </a>
                 )}
                 <Link href={`/dashboard/posts/${p.id}/edit`} className="btn btn-ghost text-xs">
                   Edit

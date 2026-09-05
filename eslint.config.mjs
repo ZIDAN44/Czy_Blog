@@ -15,6 +15,7 @@ export default [
       'apps/api/src/generated/**',
       'apps/api/prisma/migrations/**',
       'apps/dashboard/next-env.d.ts',
+      'apps/web/next-env.d.ts',
     ],
   },
   js.configs.recommended,
@@ -50,7 +51,7 @@ export default [
   },
 
   {
-    files: ['apps/dashboard/**/*.{ts,tsx,js,jsx}'],
+    files: ['apps/dashboard/**/*.{ts,tsx,js,jsx}', 'apps/web/**/*.{ts,tsx,js,jsx}'],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },

@@ -15,19 +15,19 @@ export default function ReadHeader() {
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link href="/read" className="flex items-center gap-2 pressable">
+        <Link href="/" className="flex items-center gap-2 pressable">
           <Logo className="w-7 h-7 text-content" />
           <span className="font-semibold tracking-tight">Czy Blog</span>
         </Link>
         <nav className="text-sm flex items-center gap-1">
           <Link
-            href="/read"
+            href="/"
             className="px-2.5 py-1 rounded-lg text-content-secondary hover:text-content hover:bg-fill-hover"
           >
             Posts
           </Link>
           <a
-            href="/api-proxy/rss.xml"
+            href="/rss.xml"
             className="px-2.5 py-1 rounded-lg text-content-secondary hover:text-content hover:bg-fill-hover"
           >
             RSS

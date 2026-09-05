@@ -42,10 +42,7 @@ export default async function ReadPost({ params }: { params: Promise<{ slug: str
   return (
     <article className="space-y-8">
       {/* The way out is always in the same place, so nobody gets stuck here. */}
-      <Link
-        href="/read"
-        className="inline-flex items-center gap-1.5 t-secondary hover:text-content"
-      >
+      <Link href="/" className="inline-flex items-center gap-1.5 t-secondary hover:text-content">
         ← All posts
       </Link>
 
