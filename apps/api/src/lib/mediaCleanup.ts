@@ -1,6 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
-import fs from 'node:fs/promises';
 import { prisma } from '../db.js';
+import { deleteObject } from './storage.js';
 
 // URL -> storage filename, so matching survives base-URL changes.
 function urlKey(url: string | null | undefined): string | null {
@@ -56,18 +56,16 @@ async function collectReferencedKeys(): Promise<Set<string>> {
 }
 
 async function deleteMediaRows(
-  rows: { id: string; storagePath: string }[],
+  rows: { id: string; storageKey: string }[],
   log: FastifyBaseLogger,
 ): Promise<number> {
   let removed = 0;
   for (const row of rows) {
     try {
-      await fs.unlink(row.storagePath);
+      await deleteObject(row.storageKey);
     } catch (err) {
-      // Missing file is fine; still drop the row. Log anything else, keep going.
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-        log.warn({ err, storagePath: row.storagePath }, 'failed to unlink media file');
-      }
+      // Delete failed: log but still drop the row — keeping it just re-fails forever.
+      log.warn({ err, storageKey: row.storageKey }, 'failed to delete media object');
     }
     await prisma.media.delete({ where: { id: row.id } });
     removed += 1;
@@ -91,7 +89,7 @@ export async function purgePostMedia(
   // whole media table — bounded by this post, not the whole library.
   const candidates = await prisma.media.findMany({
     where: { OR: [...orphanKeys].map((key) => ({ url: { endsWith: `/${key}` } })) },
-    select: { id: true, storagePath: true, url: true },
+    select: { id: true, storageKey: true, url: true },
   });
   const toDelete = candidates.filter((m) => {
     const k = urlKey(m.url);
@@ -107,12 +105,12 @@ export async function purgePostMedia(
 export async function sweepOrphanedMedia(log: FastifyBaseLogger): Promise<void> {
   const referenced = await collectReferencedKeys();
   const all = await prisma.media.findMany({
-    select: { id: true, url: true, storagePath: true, isOrphan: true },
+    select: { id: true, url: true, storageKey: true, isOrphan: true },
   });
 
   const toClear: string[] = [];
   const toFlag: string[] = [];
-  const toDelete: { id: string; storagePath: string }[] = [];
+  const toDelete: { id: string; storageKey: string }[] = [];
 
   for (const m of all) {
     const key = urlKey(m.url);
@@ -120,7 +118,7 @@ export async function sweepOrphanedMedia(log: FastifyBaseLogger): Promise<void> 
     if (inUse) {
       if (m.isOrphan) toClear.push(m.id);
     } else if (m.isOrphan) {
-      toDelete.push({ id: m.id, storagePath: m.storagePath });
+      toDelete.push({ id: m.id, storageKey: m.storageKey });
     } else {
       toFlag.push(m.id);
     }

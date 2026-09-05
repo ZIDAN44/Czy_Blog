@@ -1,16 +1,15 @@
 import type { FastifyInstance } from 'fastify';
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { customAlphabet } from 'nanoid';
 import { prisma } from '../db.js';
 import { config } from '../config.js';
+import { putObject, publicUrl, getObject } from '../lib/storage.js';
 import { pageArgs, paginated, paginationSchema } from '../lib/queries.js';
 
 const id = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 16);
 
-// The stored extension comes from this table, never the uploaded filename —
-// otherwise a caller stores x.html under /uploads/ and gets it served as HTML
-// (stored XSS). SVG is excluded: it's XML that can carry script.
+// Extension + content-type come from sniffed bytes, never the filename, or a
+// caller stores x.html and it's served as HTML (stored XSS). No SVG — it scripts.
 const IMAGE_TYPES = [
   {
     mime: 'image/jpeg',
@@ -66,6 +65,32 @@ function safeDisplayName(raw: string | undefined): string {
   return cleaned || 'upload';
 }
 
+// Exact storage-key shape, so `:key` can't be a path or escape the bucket.
+const KEY_RE = new RegExp(
+  `^[a-z0-9]{16}(${IMAGE_TYPES.map((t) => t.ext.replace('.', '\\.')).join('|')})$`,
+);
+
+// Public: streams images from the private bucket via the API's credentials.
+export async function publicMediaRoutes(app: FastifyInstance) {
+  app.get('/:key', async (req, reply) => {
+    const { key } = req.params as { key: string };
+    if (!KEY_RE.test(key)) return reply.code(404).send({ error: 'Not found' });
+
+    const obj = await getObject(key);
+    if (!obj) return reply.code(404).send({ error: 'Not found' });
+
+    reply
+      .header('Content-Type', obj.contentType ?? 'application/octet-stream')
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      // User bytes: pin sniffing and sandbox so nothing executes as HTML.
+      .header('X-Content-Type-Options', 'nosniff')
+      .header('Content-Security-Policy', "default-src 'none'; sandbox")
+      .header('Cross-Origin-Resource-Policy', 'cross-origin');
+    if (obj.contentLength != null) reply.header('Content-Length', obj.contentLength);
+    return reply.send(obj.body);
+  });
+}
+
 export async function mediaRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
 
@@ -93,22 +118,15 @@ export async function mediaRoutes(app: FastifyInstance) {
           .send({ error: 'Unsupported file: expected a JPEG, PNG, GIF, WebP or AVIF image' });
       }
 
-      const storageName = `${id()}${sniffed.ext}`;
-      const root = path.resolve(config.uploadDir);
-      const fullPath = path.join(root, storageName);
-      // storageName can't currently escape root, but assert it — that guarantee lives elsewhere.
-      if (path.dirname(fullPath) !== root) {
-        return reply.code(400).send({ error: 'Invalid upload target' });
-      }
+      // Opaque key: the client's filename never affects addressing or serving.
+      const storageKey = `${id()}${sniffed.ext}`;
+      await putObject(storageKey, buf, sniffed.mime);
 
-      await fs.mkdir(root, { recursive: true });
-      await fs.writeFile(fullPath, buf);
-
-      const url = `${config.publicUploadBaseUrl}/${storageName}`;
+      const url = publicUrl(storageKey);
       const media = await prisma.media.create({
         data: {
           filename: safeDisplayName(file.filename),
-          storagePath: fullPath,
+          storageKey,
           url,
           mimeType: sniffed.mime,
           sizeBytes: buf.byteLength,

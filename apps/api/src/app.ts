@@ -2,10 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import staticPlugin from '@fastify/static';
 import multipart from '@fastify/multipart';
-import path from 'node:path';
-import fs from 'node:fs';
 import { ZodError, z } from 'zod';
 import { config } from './config.js';
 import { Prisma } from './db.js';
@@ -14,7 +11,7 @@ import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
 import { adminPostRoutes, publicPostRoutes } from './routes/posts.js';
 import { contentRoutes } from './routes/content.js';
-import { mediaRoutes } from './routes/media.js';
+import { mediaRoutes, publicMediaRoutes } from './routes/media.js';
 import { adminTaxonomyRoutes, publicTaxonomyRoutes } from './routes/taxonomy.js';
 import { rssRoutes } from './routes/rss.js';
 
@@ -44,8 +41,8 @@ export async function buildApp() {
   });
 
   await app.register(helmet, {
-    // Serves only JSON and images, never HTML, so the CSP is strictest; CORP must
-    // still allow the dashboard on another origin to display /uploads images.
+    // JSON-only API (images stream from /media with their own headers), so the
+    // global CSP is the strictest; CORP stays cross-origin for the dashboard.
     contentSecurityPolicy: {
       directives: {
         'default-src': ["'none'"],
@@ -88,26 +85,6 @@ export async function buildApp() {
     },
   });
 
-  fs.mkdirSync(config.uploadDir, { recursive: true });
-  await app.register(
-    async (instance) => {
-      await instance.register(staticPlugin, {
-        root: path.resolve(config.uploadDir),
-        prefix: '/uploads/',
-        index: false,
-        dotfiles: 'deny',
-        decorateReply: false,
-        // User-supplied bytes: pin sniffing so a file past validation can't execute as HTML.
-        setHeaders: (reply) => {
-          reply.header('X-Content-Type-Options', 'nosniff');
-          reply.header('Content-Security-Policy', "default-src 'none'; sandbox");
-          reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
-        },
-      });
-    },
-    { logLevel: 'warn' },
-  );
-
   await app.register(authPlugin);
 
   // Must be set BEFORE the route plugins: a child context inherits the error handler
@@ -147,6 +124,8 @@ export async function buildApp() {
   await app.register(adminPostRoutes, { prefix: '/api/v1/admin/posts' });
   await app.register(contentRoutes, { prefix: '/api/v1/content' });
   await app.register(mediaRoutes, { prefix: '/api/v1/media' });
+  // Public image serving (no auth), streams the private bucket.
+  await app.register(publicMediaRoutes, { prefix: '/media', logLevel: 'warn' });
   await app.register(publicTaxonomyRoutes, { prefix: '/api/v1' });
   await app.register(adminTaxonomyRoutes, { prefix: '/api/v1/admin' });
   await app.register(rssRoutes, { prefix: '/', logLevel: 'warn' });

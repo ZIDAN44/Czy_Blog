@@ -17,32 +17,32 @@ flowchart TB
     end
     subgraph API["apps/api · :4000"]
         ROUTES["/api/v1/* routes"]
+        MEDIA["/media/:key<br/>(streams private bucket)"]
         AUTHP["Auth: JWT + API key"]
         SCHED["Schedulers"]
-        STATIC["/uploads/* static files"]
     end
     DB[("Postgres")]
-    FS[["Uploads volume"]]
+    S3[["Private S3 bucket"]]
     EXT["Headless site"]
 
     DASH -->|"XHR /api-proxy (Bearer JWT)"| PROXY
     PROXY -->|forward| ROUTES
     READ -.->|"rendered by"| SC
     SC -->|"fetch (API_URL)"| ROUTES
-    IMG -->|"GET image"| STATIC
+    IMG -->|"GET /media/:key"| MEDIA
+    MEDIA -->|"GetObject"| S3
     ROUTES --> AUTHP
     ROUTES <--> DB
-    ROUTES -->|"write upload"| FS
-    STATIC -->|read| FS
+    ROUTES -->|"validate + PutObject"| S3
     SCHED <--> DB
-    SCHED -->|"delete orphan files"| FS
+    SCHED -->|"delete orphan objects"| S3
     EXT -->|x-api-key| ROUTES
 ```
 
 Two distinct browser paths: the **dashboard** is a client SPA that calls the API
 through the same-origin proxy with a Bearer token; the **reader** is server-rendered
 (its server components fetch the API directly via `API_URL`), and the browser then
-loads images straight from `/uploads`.
+loads images from the API's `/media` route, which streams them from the private bucket.
 
 ## The proxy
 
@@ -53,10 +53,11 @@ exposure, browser requests stay same-origin, and one image works in any environm
 because the API host is read at runtime, not baked into the bundle. The session JWT
 is kept in `localStorage` and sent as `Authorization: Bearer <token>`.
 
-One exception: uploaded images are loaded by the browser directly from the API's
-static `/uploads` route via `PUBLIC_UPLOAD_BASE_URL` (not through the proxy). So that
-URL must be browser-reachable — point it at the API, or at a reverse-proxied
-`/uploads` path on your domain.
+One exception: uploaded images are loaded by the browser from the API's `/media`
+route (via `MEDIA_PUBLIC_BASE_URL`), not through the dashboard proxy. That route is
+public and streams the object from the **private** bucket using the server's S3
+credentials — so the bucket is never exposed and the store keys never reach the
+browser. `MEDIA_PUBLIC_BASE_URL` must be the API as the browser reaches it.
 
 ## Request flow
 
@@ -142,7 +143,7 @@ Applied in [app.ts](../apps/api/src/app.ts):
 
 | Concern      | Handling                                                                      |
 | ------------ | ----------------------------------------------------------------------------- |
-| Headers      | `@fastify/helmet`; `/uploads` also gets `nosniff` and a sandbox CSP.          |
+| Headers      | `@fastify/helmet` with a strict CSP (JSON only; no user bytes served here).   |
 | CORS         | Explicit origin list. `*` refused in production, credentials off with it.     |
 | Rate limit   | 300/min per IP; 10/min on credential routes, 30/min on upload.                |
 | Client IP    | From `TRUST_PROXY` only — off by default, so headers cannot be forged.        |
@@ -202,6 +203,6 @@ Both run inside the API process ([scheduler.ts](../apps/api/src/scheduler.ts)):
 
 - API: Fastify 5, Prisma 7 (`@prisma/adapter-pg`), Zod 4, `@fastify/jwt`,
   `@fastify/helmet`, `@fastify/multipart` (10 MB), `@fastify/rate-limit`
-  (300/min), `@fastify/static`, bcryptjs.
+  (300/min), `@aws-sdk/client-s3`, bcryptjs.
 - Dashboard: Next.js 16 (standalone), React 19, Tiptap 3, Tailwind 4, `marked`.
 - Database: Postgres 18.

@@ -21,7 +21,7 @@ The shape is flat and meant for listings:
       "published_date": "2026-03-04T10:00:00.000Z",
       "author": "Name",
       "description": "The excerpt.",
-      "cover_image": "https://blog.example.com/uploads/abc.webp"
+      "cover_image": "https://cdn.example.com/abc.webp"
     }
   ],
   "pagination": { "page": 1, "limit": 10, "total": 42, "pages": 5 }

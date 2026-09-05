@@ -102,7 +102,7 @@ model PostTag {
 model Media {
   id          String   @id @default(cuid())
   filename    String
-  storagePath String
+  storageKey  String
   url         String
   mimeType    String
   sizeBytes   Int

@@ -18,6 +18,16 @@ if (isProd) {
   }
 }
 
+const s3Bucket = required('S3_BUCKET');
+const s3Region = process.env.S3_REGION ?? 'us-east-1';
+const s3Endpoint = process.env.S3_ENDPOINT?.trim() || undefined; // set ⇒ RustFS etc.
+
+const apiPort = Number(process.env.API_PORT ?? process.env.PORT ?? 4000);
+// Browser-facing base for image URLs: the API's /media route, not the bucket.
+const mediaPublicBaseUrl = (
+  process.env.MEDIA_PUBLIC_BASE_URL ?? `http://localhost:${apiPort}/media`
+).replace(/\/+$/, '');
+
 const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
   .split(',')
   .map((s) => s.trim())
@@ -47,7 +57,7 @@ function parseTrustProxy(raw: string | undefined): TrustProxy {
 export const config = {
   // API_PORT/API_HOST are the root .env names (bare PORT/HOST collide with the dashboard);
   // the unprefixed pair is kept as a fallback for platforms that inject PORT.
-  port: Number(process.env.API_PORT ?? process.env.PORT ?? 4000),
+  port: apiPort,
   host: process.env.API_HOST ?? process.env.HOST ?? '0.0.0.0',
   isProd,
   jwtSecret,
@@ -60,8 +70,18 @@ export const config = {
   corsAllowAny,
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   publicSiteUrl: process.env.PUBLIC_SITE_URL ?? 'http://localhost:3000',
-  uploadDir: process.env.UPLOAD_DIR ?? './uploads',
-  publicUploadBaseUrl: process.env.PUBLIC_UPLOAD_BASE_URL ?? 'http://localhost:4000/uploads',
+  s3: {
+    bucket: s3Bucket,
+    region: s3Region,
+    endpoint: s3Endpoint,
+    // Path-style: default on for a custom endpoint (what self-hosted stores want).
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false' && Boolean(s3Endpoint),
+    accessKeyId: process.env.S3_ACCESS_KEY_ID,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? '',
+  },
+  media: {
+    publicBaseUrl: mediaPublicBaseUrl,
+  },
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES ?? 10 * 1024 * 1024),
   mediaCleanupIntervalHours: Number(process.env.MEDIA_CLEANUP_INTERVAL_HOURS ?? 24),
 };

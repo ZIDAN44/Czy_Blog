@@ -114,9 +114,10 @@ not from the sent `Content-Type` or the filename, and the stored name and
 extension come from that — anything else is `415`. SVG is not accepted (it can
 carry script). Over `MAX_UPLOAD_BYTES` is `413`.
 
-Served at `/uploads/<name>` with `X-Content-Type-Options: nosniff` and a sandbox
-CSP; `url` is built from `PUBLIC_UPLOAD_BASE_URL`. The original filename is kept
-for display only.
+The validated bytes are uploaded to S3 under a random, opaque key. The bucket stays
+private: `url` points at the API's own `/media/<key>` route (`MEDIA_PUBLIC_BASE_URL`),
+which streams the object using the server's credentials. The original filename is
+kept for display only.
 
 ## Users — `/api/v1/users`
 
@@ -158,7 +159,7 @@ Getting a key, keeping it server-side, caching and rotation:
 
 ## Other
 
-| Method | Path             | Auth   | Purpose                       |
-| ------ | ---------------- | ------ | ----------------------------- |
-| GET    | `/rss.xml`       | Public | RSS 2.0, 25 latest published. |
-| GET    | `/uploads/:file` | Public | Serves uploaded media.        |
+| Method | Path          | Auth   | Purpose                                    |
+| ------ | ------------- | ------ | ------------------------------------------ |
+| GET    | `/rss.xml`    | Public | RSS 2.0, 25 latest published.              |
+| GET    | `/media/:key` | Public | Streams an uploaded image from the bucket. |

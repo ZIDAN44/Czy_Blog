@@ -37,9 +37,6 @@ docs/.vitepress/cache/
 # Generated Prisma client (regenerated via `prisma generate`)
 apps/api/src/generated/
 
-# Uploaded media (local dev storage; swap for S3/R2 in prod)
-apps/api/uploads/
-
 # OS junk
 .DS_Store
 Thumbs.db

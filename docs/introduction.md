@@ -51,7 +51,7 @@ flowchart LR
 
 - Image uploads (JPEG, PNG, WebP, GIF, AVIF), up to 10 MB. The format is read
   from the file's bytes, so a mislabelled file is rejected.
-- Stored on disk, served from `/uploads`; public base URL is configurable.
+- Stored in a private S3 bucket and streamed through the API's `/media` route.
 - Scheduled cleanup removes uploads no post references.
 
 ### Reading and distribution

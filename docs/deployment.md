@@ -39,7 +39,12 @@ API_PORT=4000
 CORS_ORIGINS=https://blog.example.com
 TRUST_PROXY=false
 PUBLIC_SITE_URL=https://blog.example.com
-PUBLIC_UPLOAD_BASE_URL=https://blog.example.com/uploads
+
+S3_BUCKET=czyblog-media
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=CHANGE-ME
+S3_SECRET_ACCESS_KEY=CHANGE-ME
+MEDIA_PUBLIC_BASE_URL=https://blog.example.com/media
 MEDIA_CLEANUP_INTERVAL_HOURS=24
 
 DASHBOARD_PORT=3000
@@ -104,25 +109,25 @@ otherwise rate limiting counts every request as coming from the proxy. Leave it
 | Stop (keep data)   | `docker compose down`                               |
 | Stop and wipe data | `docker compose down -v`                            |
 
-Backups:
+Backups (uploaded media lives in S3 — back it up with bucket versioning or a
+lifecycle/replication policy, not here):
 
 ```bash
 docker compose exec -T postgres pg_dump -U czyblog czyblog > backup-$(date +%F).sql
-docker run --rm -v czyblog_uploads:/data -v "$PWD":/out alpine \
-  tar czf /out/uploads-$(date +%F).tar.gz -C /data .
 ```
 
 Upgrades: migrations are idempotent, so `docker compose pull && docker compose up -d`.
 
 ## Troubleshooting
 
-| Symptom                             | Fix                                                                  |
-| ----------------------------------- | -------------------------------------------------------------------- |
-| API exits on a `JWT_SECRET` error   | Set it, ≥32 chars, not the example value.                            |
-| API exits on a `CORS_ORIGINS` error | Replace `*` with the real origins.                                   |
-| "Missing env: DATABASE_URL"         | Set `DATABASE_URL` in `.env`.                                        |
-| Everyone rate limited at once       | Set `TRUST_PROXY` to your proxy's address.                           |
-| Upload rejected with `415`          | Only JPEG, PNG, WebP, GIF, AVIF; the bytes must match the format.    |
-| Dashboard loads, API calls fail     | `API_URL` must be `http://api:4000`.                                 |
-| CORS errors from a headless client  | Add its origin to `CORS_ORIGINS`.                                    |
-| Uploaded images 404                 | `PUBLIC_UPLOAD_BASE_URL` must resolve to where `/uploads` is served. |
+| Symptom                             | Fix                                                           |
+| ----------------------------------- | ------------------------------------------------------------- |
+| API exits on a `JWT_SECRET` error   | Set it, ≥32 chars, not the example value.                     |
+| API exits on a `CORS_ORIGINS` error | Replace `*` with the real origins.                            |
+| "Missing env: DATABASE_URL"         | Set `DATABASE_URL` in `.env`.                                 |
+| Everyone rate limited at once       | Set `TRUST_PROXY` to your proxy's address.                    |
+| Upload rejected with `415`          | Only JPEG, PNG, WebP, GIF, AVIF.                              |
+| Dashboard loads, API calls fail     | `API_URL` must be `http://api:4000`.                          |
+| CORS errors from a headless client  | Add its origin to `CORS_ORIGINS`.                             |
+| Upload fails                        | Check `S3_BUCKET`, `S3_ENDPOINT`, and the access credentials. |
+| Images 404 / don't load             | `MEDIA_PUBLIC_BASE_URL` must be the API's `/media` route.     |

@@ -36,23 +36,28 @@ Configure the `postgres` service. The apps connect via `DATABASE_URL`, not these
 
 Read in [config.ts](../apps/api/src/config.ts).
 
-| Variable                       | Required  | Default                         | Purpose                                                                                  |
-| ------------------------------ | --------- | ------------------------------- | ---------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                 | Yes       | —                               | Postgres connection string. Compose overrides the host with the `postgres` service.      |
-| `JWT_SECRET`                   | Prod only | dev fallback                    | Signs JWTs. In production must be set, ≥32 chars, not the dev default — else boot fails. |
-| `JWT_ISSUER`                   | No        | `czy-blog`                      | `iss` claim; rejected on verify if it differs.                                           |
-| `JWT_AUDIENCE`                 | No        | `czy-blog-api`                  | `aud` claim; rejected on verify if it differs.                                           |
-| `BCRYPT_ROUNDS`                | No        | `12`                            | Password hash work factor.                                                               |
-| `API_PORT`                     | No        | `4000`                          | Listen port, and the host port Compose publishes. Falls back to `PORT`.                  |
-| `API_HOST`                     | No        | `0.0.0.0`                       | Bind address. Falls back to `HOST`.                                                      |
-| `CORS_ORIGINS`                 | No        | `http://localhost:3000`         | Comma-separated origins. `*` is refused in production — boot fails.                      |
-| `TRUST_PROXY`                  | No        | `false`                         | See below. `false` \| `true` \| hop count \| ip/cidr list.                               |
-| `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`         | Base for post links in RSS / content API.                                                |
-| `UPLOAD_DIR`                   | No        | `./uploads`                     | Where uploads are stored on disk.                                                        |
-| `PUBLIC_UPLOAD_BASE_URL`       | No        | `http://localhost:4000/uploads` | Public base prepended to upload filenames.                                               |
-| `MAX_UPLOAD_BYTES`             | No        | `10485760`                      | Per-file upload limit (10 MB).                                                           |
-| `MEDIA_CLEANUP_INTERVAL_HOURS` | No        | `24`                            | Orphan-media sweep interval.                                                             |
-| `NODE_ENV`                     | No        | —                               | `production` enforces the `JWT_SECRET` and `CORS_ORIGINS` checks (set in the image).     |
+| Variable                       | Required  | Default                             | Purpose                                                           |
+| ------------------------------ | --------- | ----------------------------------- | ----------------------------------------------------------------- |
+| `DATABASE_URL`                 | Yes       | —                                   | Postgres connection string. Compose overrides the host.           |
+| `JWT_SECRET`                   | Prod only | dev fallback                        | Signs JWTs. In production must be set, ≥32 chars.                 |
+| `JWT_ISSUER`                   | No        | `czy-blog`                          | `iss` claim; rejected on verify if it differs.                    |
+| `JWT_AUDIENCE`                 | No        | `czy-blog-api`                      | `aud` claim; rejected on verify if it differs.                    |
+| `BCRYPT_ROUNDS`                | No        | `12`                                | Password hash work factor.                                        |
+| `API_PORT`                     | No        | `4000`                              | Listen port, and the host port Compose publishes.                 |
+| `API_HOST`                     | No        | `0.0.0.0`                           | Bind address. Falls back to `HOST`.                               |
+| `CORS_ORIGINS`                 | No        | `http://localhost:3000`             | Comma-separated origins. `*` is refused in production.            |
+| `TRUST_PROXY`                  | No        | `false`                             | See below. `false` \| `true` \| hop count \| ip/cidr list.        |
+| `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`             | Base for post links in RSS / content API.                         |
+| `S3_BUCKET`                    | Yes       | —                                   | Bucket uploads are stored in.                                     |
+| `S3_REGION`                    | No        | `us-east-1`                         | Bucket region.                                                    |
+| `S3_ACCESS_KEY_ID`             | No        | —                                   | Access key.                                                       |
+| `S3_SECRET_ACCESS_KEY`         | No        | —                                   | Secret key, paired with the access key.                           |
+| `S3_ENDPOINT`                  | No        | —                                   | Endpoint of a S3-compatible server.                               |
+| `S3_FORCE_PATH_STYLE`          | No        | on when `S3_ENDPOINT` set           | Path-style addressing.                                            |
+| `MEDIA_PUBLIC_BASE_URL`        | No        | `http://localhost:<API_PORT>/media` | Browser-facing base for image URLs.                               |
+| `MAX_UPLOAD_BYTES`             | No        | `10485760`                          | Per-file upload limit (10 MB).                                    |
+| `MEDIA_CLEANUP_INTERVAL_HOURS` | No        | `24`                                | Orphan-media sweep interval.                                      |
+| `NODE_ENV`                     | No        | —                                   | `production` enforces the `JWT_SECRET` and `CORS_ORIGINS` checks. |
 
 Generate a secret: `openssl rand -base64 48`.
 
@@ -90,7 +95,12 @@ JWT_SECRET=<openssl rand -base64 48>
 CORS_ORIGINS=https://blog.example.com
 TRUST_PROXY=<proxy ip/cidr, if any>
 PUBLIC_SITE_URL=https://blog.example.com
-PUBLIC_UPLOAD_BASE_URL=https://blog.example.com/uploads
+
+S3_BUCKET=czyblog-media
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=<access-key>
+S3_SECRET_ACCESS_KEY=<secret-key>
+MEDIA_PUBLIC_BASE_URL=https://blog.example.com/media
 ```
 
 `DATABASE_URL` and `API_URL` are omitted on purpose: under Compose they come

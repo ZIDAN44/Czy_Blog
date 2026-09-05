@@ -21,9 +21,6 @@ apps/api/src/generated
 .env.local
 **/.env.*.local
 
-# Uploaded media
-apps/api/uploads
-
 # Logs, caches, coverage
 *.log
 coverage

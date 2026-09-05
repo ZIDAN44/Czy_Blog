@@ -36,13 +36,9 @@ COPY --from=build /app/apps/api/prisma ./prisma
 COPY --from=build /app/apps/api/prisma.config.ts ./prisma.config.ts
 COPY apps/api/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
-    && mkdir -p ./uploads \
-    && chown -R node:node /app/apps/api/uploads
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER node
-
-VOLUME ["/app/apps/api/uploads"]
 
 EXPOSE 4000
 
