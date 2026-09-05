@@ -2,6 +2,7 @@
 # Requires .env file with environment variables
 
 services:
+  # Postgres database
   postgres:
     image: postgres:18-alpine
     container_name: czyblog-postgres
@@ -20,11 +21,12 @@ services:
       timeout: 5s
       retries: 10
 
+  # API service
   api:
+    image: ghcr.io/zidan44/czyblog-api:latest
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    image: czyblog-api
     container_name: czyblog-api
     restart: unless-stopped
     depends_on:
@@ -32,44 +34,38 @@ services:
         condition: service_healthy
     env_file: .env
     environment:
-      # `environment` wins over `env_file`: reach Postgres over the compose
-      # network instead of the host `localhost` the .env is written for.
-      # Using an external database? Delete this key and set DATABASE_URL in .env.
       DATABASE_URL: postgresql://${POSTGRES_USER:-czyblog}:${POSTGRES_PASSWORD:-czyblog}@postgres:5432/${POSTGRES_DB:-czyblog}?schema=public
     ports:
       - "${API_PORT:-4000}:${API_PORT:-4000}"
 
-  # Public reader site — its own app on its own origin, no admin code.
+  # Public reader site
   web:
+    image: ghcr.io/zidan44/czyblog-web:latest
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    image: czyblog-web
     container_name: czyblog-web
     restart: unless-stopped
     depends_on:
       - api
     env_file: .env
     environment:
-      # Reader pages fetch published content from the API over the compose network.
       API_URL: http://api:${API_PORT:-4000}
     ports:
       - "${WEB_PORT:-3000}:3000"
 
-  # Admin console — separate app, separate origin, gated by middleware.
+  # Admin console
   dashboard:
+    image: ghcr.io/zidan44/czyblog-dashboard:latest
     build:
       context: .
       dockerfile: apps/dashboard/Dockerfile
-    image: czyblog-dashboard
     container_name: czyblog-dashboard
     restart: unless-stopped
     depends_on:
       - api
     env_file: .env
     environment:
-      # Same idea: the dashboard's server-side proxy talks to the API service
-      # over the compose network, not the host loopback.
       API_URL: http://api:${API_PORT:-4000}
     ports:
       - "${DASHBOARD_PORT:-3001}:3001"
