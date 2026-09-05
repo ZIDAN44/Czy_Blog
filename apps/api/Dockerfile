@@ -29,21 +29,9 @@ COPY apps/api/package.json ./package.json
 RUN npm install --omit=dev --legacy-peer-deps --ignore-scripts --no-audit --no-fund \
  && npm cache clean --force
 
-# One-shot image that applies migrations (this is what needs the Prisma CLI).
-FROM base AS migrator
-ENV NODE_ENV=production HOME=/home/node
-WORKDIR /app/apps/api
-COPY apps/api/package.json ./package.json
-RUN npm install --no-save --no-audit --no-fund \
-      "prisma@$(node -p "require('./package.json').devDependencies.prisma")" dotenv \
- && npm cache clean --force
-COPY apps/api/prisma ./prisma
-COPY apps/api/prisma.config.ts ./prisma.config.ts
-USER node
-CMD ["npx", "--no-install", "prisma", "migrate", "deploy"]
-
 # The API service. Distroless has no shell/npm — just the Node 26 runtime and a
 # nonroot user; `node` is the image's entrypoint, so CMD is only the script.
+# Migrations are applied at startup (src/migrate.ts) from the SQL files below.
 FROM gcr.io/distroless/nodejs26-debian13:nonroot AS runner
 ENV NODE_ENV=production \
     PORT=4000 \
@@ -52,5 +40,6 @@ WORKDIR /app/apps/api
 COPY --from=prod-deps /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/package.json ./package.json
 COPY --from=build /app/apps/api/dist ./dist
+COPY --from=build /app/apps/api/prisma/migrations ./prisma/migrations
 EXPOSE 4000
 CMD ["dist/server.js"]

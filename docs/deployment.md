@@ -65,8 +65,9 @@ DASHBOARD_PORT=3001
 docker compose up -d
 ```
 
-The API runs `prisma migrate deploy` on first boot. Postgres gates the API; the API
-gates the reader and console. Check: `docker compose ps`, `docker compose logs -f api`.
+The API applies any pending database migrations itself on boot, then starts serving.
+Postgres gates the API; the API gates the reader and console. Check: `docker compose ps`,
+`docker compose logs -f api`.
 
 ## 4. Create the first admin
 
