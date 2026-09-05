@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Czy Blog
   text: Self-hosted blog platform
-  tagline: A self-hosted blog writer where you write and publish them so other people can read them
+  tagline: Write and publish posts from an admin console; readers read them on a separate public site.
   actions:
     - theme: brand
       text: Introduction
@@ -37,8 +37,8 @@ features:
 
 ## The stack
 
-Three apps in one repo, all behind a single `.env`. The public reader and the admin
-console are separate apps on separate origins, so a reader can never reach an admin
+Three apps in one repo, behind a single `.env`. The public reader and the admin
+console are separate apps on separate origins, so a reader cannot reach an admin
 page. Both talk to the API server-side, so the API need not be public.
 
 | App              | Stack                       | Port | Purpose                               |
@@ -57,5 +57,5 @@ docker compose up -d
 ```
 
 Blog on `http://localhost:3000`, admin console on `http://localhost:3001`, API on
-`http://localhost:4000`. The full walkthrough, including the bits you must change before
-exposing it, is in [production deployment](./deployment.md).
+`http://localhost:4000`. Full walkthrough, including what to change before exposing it:
+[production deployment](./deployment.md).

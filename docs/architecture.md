@@ -3,9 +3,8 @@
 Four services: the **reader** (`apps/web`) and the **admin console** (`apps/dashboard`)
 are separate Next.js apps on separate origins, plus the Fastify API and Postgres. Neither
 front-end exposes the API to the browser — the reader fetches server-side, the console
-proxies through its own origin — so the API need not be public. Splitting the two front
-ends means the reader app contains no admin routes at all: a reader cannot reach a login
-or dashboard page even by editing the URL.
+proxies through its own origin — so the API need not be public. The reader app contains no
+admin routes: a reader cannot reach a login or dashboard page by editing the URL.
 
 ```mermaid
 flowchart TB
@@ -51,33 +50,31 @@ flowchart TB
     EXT -->|x-api-key| ROUTES
 ```
 
-Two distinct front ends: the **console** is a client SPA whose requests carry an httpOnly
-session cookie; its own origin proxies them to the API with a Bearer token. The **reader**
-is server-rendered (its server components fetch the API directly via `API_URL`); the
-browser then loads images from the API's `/media` route, which streams them from the
-private bucket, and reaches the feed via the reader's same-origin `/rss.xml` passthrough.
+The **console** is a client SPA whose requests carry an httpOnly session cookie; its own
+origin proxies them to the API with a Bearer token. The **reader** is server-rendered and
+fetches the API directly via `API_URL`; the browser loads images from the API's `/media`
+route (streamed from the private bucket) and reaches the feed via the reader's same-origin
+`/rss.xml` passthrough.
 
 ## Auth cookie + proxy (console)
 
-The session JWT lives in an **httpOnly cookie** the browser's JavaScript cannot read, so
-an XSS bug can't exfiltrate it. Sign-in/out go through the console's
-[`/api/auth/*` route handlers](../apps/dashboard/src/app/api/auth), which call the API and
-move the returned token into the cookie. [`middleware.ts`](../apps/dashboard/src/middleware.ts)
-verifies the cookie (signature, issuer, audience, expiry) before any admin route renders,
-and redirects unauthenticated visitors to `/login`.
+The session JWT lives in an **httpOnly cookie** JavaScript cannot read, so XSS can't
+exfiltrate it. Sign-in/out go through the console's
+[`/api/auth/*` route handlers](../apps/dashboard/src/app/api/auth), which move the returned
+token into the cookie. [`middleware.ts`](../apps/dashboard/src/middleware.ts) verifies the
+cookie (signature, issuer, audience, expiry) before any admin route renders and redirects
+unauthenticated visitors to `/login`.
 
 Other console calls go to `/api-proxy/...` (same origin). The
 [proxy route](../apps/dashboard/src/app/api-proxy/[...path]/route.ts) reads the cookie and
-`API_URL` at request time, translates the cookie into `Authorization: Bearer <token>`
-server-side, and forwards the call. Result: the token never touches client JavaScript, the
-API needs no public exposure, and the API host is read at runtime rather than baked into
-the bundle.
+`API_URL` at request time, turns the cookie into `Authorization: Bearer <token>`
+server-side, and forwards the call — so the token never touches client JS and the API
+needs no public exposure.
 
-One exception: uploaded images are loaded by the browser from the API's `/media`
-route (via `MEDIA_PUBLIC_BASE_URL`), not through the dashboard proxy. That route is
-public and streams the object from the **private** bucket using the server's S3
-credentials — so the bucket is never exposed and the store keys never reach the
-browser. `MEDIA_PUBLIC_BASE_URL` must be the API as the browser reaches it.
+Exception: uploaded images load from the API's `/media` route (via
+`MEDIA_PUBLIC_BASE_URL`), not the proxy. That route is public and streams objects from the
+**private** bucket using the server's S3 credentials, so the bucket and store keys never
+reach the browser. `MEDIA_PUBLIC_BASE_URL` must be the API as the browser reaches it.
 
 ## Request flow
 
@@ -98,16 +95,14 @@ sequenceDiagram
     N-->>B: 200 { data }
 ```
 
-On every authenticated request the API reloads the user's role from the database
-rather than trusting the JWT, so demotions and deletions apply immediately. The
-same lookup compares the token's `tv` claim against the user's `tokenVersion`,
-which a password change increments — so older tokens stop working then too. See
-[auth.ts](../apps/api/src/plugins/auth.ts).
+Every authenticated request reloads the user's role from the database rather than
+trusting the JWT, so demotions and deletions apply immediately. The same lookup compares
+the token's `tv` claim against the user's `tokenVersion` (incremented on password change),
+so older tokens stop working. See [auth.ts](../apps/api/src/plugins/auth.ts).
 
-Writes that span more than one statement (replacing a post's tags, deleting a
-user, the last-super-admin checks, first-run bootstrap) run in a transaction, the
-last three at `Serializable`, so a concurrent request cannot slip between the
-check and the write.
+Multi-statement writes (replacing tags, deleting a user, last-super-admin checks,
+first-run bootstrap) run in a transaction — the last three at `Serializable` — so a
+concurrent request cannot slip between check and write.
 
 ## Data model
 
@@ -136,13 +131,11 @@ erDiagram
     }
 ```
 
-- Post content is JSONB — a Tiptap document (`{ type: "doc", content: [...] }`),
-  validated against the editor's node types and size limits before it is stored
-  ([content.ts](../apps/api/src/lib/content.ts)).
+- Post content is JSONB — a Tiptap document, validated against the editor's node types
+  and size limits before storage ([content.ts](../apps/api/src/lib/content.ts)).
 - `User.tokenVersion` increments on password change; JWTs carry it as `tv`.
 - Soft deletes set `deletedAt` and `ARCHIVED`; queries filter `deletedAt: null`.
-- Deleting a user reassigns their posts/media to the acting super admin (author FK
-  is required).
+- Deleting a user reassigns their posts/media to the acting super admin.
 
 ## Auth
 
@@ -154,11 +147,9 @@ Two credential types:
 | API key (`czk_…`) | Headless consumers | `x-api-key: <key>`            | `apiKeyAuth`   |
 
 The console holds the JWT in an httpOnly cookie; its proxy turns that into the Bearer
-header above. The API also verifies the same JWT settings in the console's middleware.
-
-JWTs are HS256 with a pinned issuer and audience. Passwords are bcrypt at
-`BCRYPT_ROUNDS`. API keys are shown once; only a SHA-256 hash and 12-char prefix
-are stored ([apiKey.ts](../apps/api/src/lib/apiKey.ts)).
+header. JWTs are HS256 with a pinned issuer and audience. Passwords are bcrypt at
+`BCRYPT_ROUNDS`. API keys are shown once; only a SHA-256 hash and 12-char prefix are
+stored ([apiKey.ts](../apps/api/src/lib/apiKey.ts)).
 
 ## Request hardening
 
@@ -174,9 +165,8 @@ Applied in [app.ts](../apps/api/src/app.ts):
 | Errors       | Zod → `400`, known Prisma codes → `409`/`404`, everything else → plain `500`. |
 | Logs         | `authorization`, `cookie`, `x-api-key` redacted.                              |
 
-The error and not-found handlers are installed before the route plugins, since a
-Fastify child context inherits whichever handler its parent had when it was
-created.
+The error and not-found handlers are installed before the route plugins (a Fastify child
+context inherits its parent's handler at creation time).
 
 ## Roles (RBAC)
 
@@ -195,8 +185,8 @@ Ranked in [rbac.ts](../apps/api/src/lib/rbac.ts):
 
 \* Contributor publish/schedule attempts are downgraded to `PENDING_REVIEW`.
 
-The first account is created via the unauthenticated bootstrap endpoint as
-`SUPER_ADMIN`. After that there is no public registration.
+The first account is created via the unauthenticated bootstrap endpoint as `SUPER_ADMIN`;
+after that there is no public registration.
 
 ## Post lifecycle
 

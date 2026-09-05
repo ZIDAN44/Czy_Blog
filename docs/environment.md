@@ -1,30 +1,27 @@
 # Environment Variables
 
-There is exactly one env file: `.env` at the repo root (copy
-[`.env.example`](../.env.example)). The apps have none of their own.
+One env file: `.env` at the repo root (copy [`.env.example`](../.env.example)). The
+apps have none of their own.
 
-Consumers that read it:
+Read by:
 
 | Consumer       | How                                                                        |
 | -------------- | -------------------------------------------------------------------------- |
 | Docker Compose | `env_file: .env` on the `api`, `web`, and `dashboard` services.            |
 | API            | [`apps/api/src/env.ts`](../apps/api/src/env.ts) loads it by absolute path. |
-| Prisma CLI     | [`apps/api/prisma.config.ts`](../apps/api/prisma.config.ts), same path.    |
+| Prisma CLI     | [`apps/api/prisma.config.ts`](../apps/api/prisma.config.ts).               |
 | Web            | [`apps/web/next.config.mjs`](../apps/web/next.config.mjs).                 |
 | Dashboard      | [`apps/dashboard/next.config.mjs`](../apps/dashboard/next.config.mjs).     |
 
-Resolution is by absolute path, not `process.cwd()`, so it works from the repo
-root and from inside `apps/*`. A variable already present in the real
-environment always wins — dotenv never overwrites — which is why Compose's
-`environment:` and the container images' own `ENV` defaults still take effect.
-
-The file holds localhost values so the apps run directly on your machine. The
-only two settings that must differ on the Docker network — the database host and
-`API_URL` — are overridden per service in `docker-compose.yml`.
+Loaded by absolute path, so it works from the repo root and inside `apps/*`. A variable
+already in the real environment wins — dotenv never overwrites — so Compose's
+`environment:` and image `ENV` defaults still take effect. The only two settings that
+differ on the Docker network (the database host and `API_URL`) are overridden per
+service in `docker-compose.yml`.
 
 ## Postgres (Compose only)
 
-Configure the `postgres` service. The apps connect via `DATABASE_URL`, not these.
+The apps connect via `DATABASE_URL`, not these.
 
 | Variable            | Default   | Purpose                            |
 | ------------------- | --------- | ---------------------------------- |
@@ -37,56 +34,45 @@ Configure the `postgres` service. The apps connect via `DATABASE_URL`, not these
 
 Read in [config.ts](../apps/api/src/config.ts).
 
-| Variable                       | Required  | Default                             | Purpose                                                           |
-| ------------------------------ | --------- | ----------------------------------- | ----------------------------------------------------------------- |
-| `DATABASE_URL`                 | Yes       | —                                   | Postgres connection string. Compose overrides the host.           |
-| `JWT_SECRET`                   | Prod only | dev fallback                        | Signs JWTs. In production must be set, ≥32 chars.                 |
-| `JWT_ISSUER`                   | No        | `czy-blog`                          | `iss` claim; rejected on verify if it differs.                    |
-| `JWT_AUDIENCE`                 | No        | `czy-blog-api`                      | `aud` claim; rejected on verify if it differs.                    |
-| `BCRYPT_ROUNDS`                | No        | `12`                                | Password hash work factor.                                        |
-| `API_PORT`                     | No        | `4000`                              | Listen port, and the host port Compose publishes.                 |
-| `API_HOST`                     | No        | `0.0.0.0`                           | Bind address. Falls back to `HOST`.                               |
-| `CORS_ORIGINS`                 | No        | `http://localhost:3000`             | Comma-separated origins. `*` is refused in production.            |
-| `TRUST_PROXY`                  | No        | `false`                             | See below. `false` \| `true` \| hop count \| ip/cidr list.        |
-| `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`             | The reader's origin: post links in RSS / content API.             |
-| `S3_BUCKET`                    | Yes       | —                                   | Bucket uploads are stored in.                                     |
-| `S3_REGION`                    | No        | `us-east-1`                         | Bucket region.                                                    |
-| `S3_ACCESS_KEY_ID`             | No        | —                                   | Access key.                                                       |
-| `S3_SECRET_ACCESS_KEY`         | No        | —                                   | Secret key, paired with the access key.                           |
-| `S3_ENDPOINT`                  | No        | —                                   | Endpoint of a S3-compatible server.                               |
-| `S3_FORCE_PATH_STYLE`          | No        | on when `S3_ENDPOINT` set           | Path-style addressing.                                            |
-| `MEDIA_PUBLIC_BASE_URL`        | No        | `http://localhost:<API_PORT>/media` | Browser-facing base for image URLs.                               |
-| `MAX_UPLOAD_BYTES`             | No        | `10485760`                          | Per-file upload limit (10 MB).                                    |
-| `MEDIA_CLEANUP_INTERVAL_HOURS` | No        | `24`                                | Orphan-media sweep interval.                                      |
-| `NODE_ENV`                     | No        | —                                   | `production` enforces the `JWT_SECRET` and `CORS_ORIGINS` checks. |
+| Variable                       | Required  | Default                             | Purpose                                                       |
+| ------------------------------ | --------- | ----------------------------------- | ------------------------------------------------------------- |
+| `DATABASE_URL`                 | Yes       | —                                   | Postgres connection string. Compose overrides the host.       |
+| `JWT_SECRET`                   | Prod only | dev fallback                        | Signs JWTs. In production must be set, ≥32 chars.             |
+| `JWT_ISSUER`                   | No        | `czy-blog`                          | `iss` claim; rejected on verify if it differs.                |
+| `JWT_AUDIENCE`                 | No        | `czy-blog-api`                      | `aud` claim; rejected on verify if it differs.                |
+| `BCRYPT_ROUNDS`                | No        | `12`                                | Password hash work factor.                                    |
+| `API_PORT`                     | No        | `4000`                              | Listen port, and the host port Compose publishes.             |
+| `API_HOST`                     | No        | `0.0.0.0`                           | Bind address. Falls back to `HOST`.                           |
+| `CORS_ORIGINS`                 | No        | `http://localhost:3000`             | Comma-separated origins. `*` is refused in production.        |
+| `TRUST_PROXY`                  | No        | `false`                             | Client-IP source. `false` \| `true` \| hop count \| cidr.     |
+| `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`             | Reader origin: post links in RSS / content API.               |
+| `S3_BUCKET`                    | Yes       | —                                   | Bucket uploads are stored in.                                 |
+| `S3_REGION`                    | No        | `us-east-1`                         | Bucket region.                                                |
+| `S3_ACCESS_KEY_ID`             | No        | —                                   | Access key.                                                   |
+| `S3_SECRET_ACCESS_KEY`         | No        | —                                   | Secret key.                                                   |
+| `S3_ENDPOINT`                  | No        | —                                   | Endpoint of an S3-compatible server.                          |
+| `S3_FORCE_PATH_STYLE`          | No        | on when `S3_ENDPOINT` set           | Path-style addressing.                                        |
+| `MEDIA_PUBLIC_BASE_URL`        | No        | `http://localhost:<API_PORT>/media` | Browser-facing base for image URLs.                           |
+| `MAX_UPLOAD_BYTES`             | No        | `10485760`                          | Per-file upload limit (10 MB).                                |
+| `MEDIA_CLEANUP_INTERVAL_HOURS` | No        | `24`                                | Orphan-media sweep interval.                                  |
+| `NODE_ENV`                     | No        | —                                   | `production` enforces the `JWT_SECRET`/`CORS_ORIGINS` checks. |
 
 Generate a secret: `openssl rand -base64 48`.
 
-`API_PORT`/`API_HOST` carry the prefix because a bare `PORT`/`HOST` in a shared
-file would also be picked up by the Next.js apps. The unprefixed pair is still
-read as a fallback, for platforms that inject `PORT` themselves.
+`API_PORT`/`API_HOST` carry the prefix so a bare `PORT`/`HOST` in the shared file isn't
+also picked up by the Next.js apps. The unprefixed pair is still read as a fallback.
 
-### `TRUST_PROXY`
-
-Decides where the API reads the client IP from, which is what rate limiting
-buckets on. Leave it `false` unless a proxy you control sits in front — with it
-on, a directly reachable API lets any client send its own `X-Forwarded-For` and
-get a fresh rate-limit bucket per request. Behind a reverse proxy, set it to the
+**`TRUST_PROXY`** decides where the API reads the client IP (which rate limiting buckets
+on). Leave it `false` unless a proxy you control sits in front; then set it to the
 proxy's address or CIDR (`TRUST_PROXY=10.0.0.0/8`) rather than `true`.
 
-## Web + Dashboard — `apps/web`, `apps/dashboard`
+## Web + Dashboard
 
 | Variable         | Default                 | Purpose                                    |
 | ---------------- | ----------------------- | ------------------------------------------ |
 | `API_URL`        | `http://localhost:4000` | Where both apps reach the API server-side. |
 | `WEB_PORT`       | `3000`                  | Host port for the public reader.           |
 | `DASHBOARD_PORT` | `3001`                  | Host port for the admin console.           |
-
-The reader (`apps/web`) fetches published content from the API server-side and
-exposes no admin routes. The console (`apps/dashboard`) is same-origin
-(`/api-proxy/...`) and reaches the API over `API_URL`; it reads `PUBLIC_SITE_URL`
-at request time for links back to the reader. The API needs a published port only
-if headless clients reach it directly.
 
 ## Minimal production `.env`
 
@@ -107,7 +93,6 @@ S3_SECRET_ACCESS_KEY=<secret-key>
 MEDIA_PUBLIC_BASE_URL=https://blog.example.com/media
 ```
 
-`DATABASE_URL` and `API_URL` are omitted on purpose: under Compose they come
-from the `environment:` blocks in `docker-compose.yml`, built from the
-`POSTGRES_*` values above. Set `DATABASE_URL` here only for an external
-database, and remove the override from the `api` service when you do.
+`DATABASE_URL` and `API_URL` are omitted on purpose — under Compose they come from
+`docker-compose.yml`. Set `DATABASE_URL` here only for an external database, and remove
+the override from the `api` service when you do.

@@ -9,16 +9,15 @@ they go through the dashboard proxy at `/api-proxy/api/v1/...`.
 
 Conventions:
 
-- Lists return `{ data: [...], pagination: { page, limit, total, pages } }`.
-- Single objects return `{ data: {...} }`.
-- Validation errors return `400 { error: "ValidationError", issues }`.
-- Other errors return `{ error: "message" }`. `5xx` bodies are always
-  `Internal Server Error`; the detail goes to the server log.
+- Lists return `{ data: [...], pagination: { page, limit, total, pages } }`; single
+  objects return `{ data: {...} }`.
+- Validation errors → `400 { error: "ValidationError", issues }`; other errors →
+  `{ error: "message" }`. `5xx` bodies are always `Internal Server Error`.
 - `page` ≤ 10000. Ids must be cuids and slugs `[a-z0-9-]`, else `400`.
-- Rate limit: 300 req/min per IP. Credential endpoints (`/auth/login`,
-  `/auth/bootstrap`, `/auth/change-password`) 10/min; `/media/upload` 30/min.
-  Set [`TRUST_PROXY`](environment.md#trust_proxy) if the API is behind a proxy,
-  or every client shares one bucket.
+- Rate limit: 300 req/min per IP; credential endpoints (`/auth/login`,
+  `/auth/bootstrap`, `/auth/change-password`) 10/min; `/media/upload` 30/min. Set
+  [`TRUST_PROXY`](environment.md#trust_proxy) behind a proxy, or every client shares one
+  bucket.
 
 ## Health
 
@@ -36,12 +35,10 @@ Conventions:
 | GET    | `/auth/me`               | JWT    | Current user profile.                                      |
 | POST   | `/auth/change-password`  | JWT    | `currentPassword`, `newPassword` (must differ).            |
 
-Login, bootstrap and change-password return
-`{ token, user: { id, email, name, role } }`. A password change invalidates every
-token issued before it, so the caller must store the new one — older tokens get
-`401 { error: "Session is no longer valid" }`.
-
-Passwords are 8–72 characters (bcrypt reads at most 72 bytes).
+Login, bootstrap and change-password return `{ token, user: { id, email, name, role } }`.
+A password change invalidates every earlier token (they get
+`401 { error: "Session is no longer valid" }`), so store the new one. Passwords are
+8–72 characters.
 
 ## Posts — public — `/api/v1/posts`
 
@@ -82,12 +79,12 @@ Body (all optional on PATCH):
 Rules: `SCHEDULED` needs a future `scheduledFor`; contributor publish/schedule
 downgrades to `PENDING_REVIEW`; only editors+ create new categories/tags via slugs.
 
-`content` is checked against the node and mark types the editor uses (`paragraph`,
-`heading`, `bulletList`, `orderedList`, `listItem`, `blockquote`, `codeBlock`,
-`horizontalRule`, `hardBreak`, `image`, `text`; marks `bold`, `italic`, `strike`,
-`code`, `link`). Unknown types are rejected. Limits: 30 levels deep, 10000 nodes,
-50000 chars per text node. `href`/`src` attributes must be relative or `http`,
-`https`, `mailto` — `javascript:` and `data:` are rejected.
+`content` is validated against the editor's node/mark types (`paragraph`, `heading`,
+`bulletList`, `orderedList`, `listItem`, `blockquote`, `codeBlock`, `horizontalRule`,
+`hardBreak`, `image`, `text`; marks `bold`, `italic`, `strike`, `code`, `link`); unknown
+types are rejected. Limits: 30 levels deep, 10000 nodes, 50000 chars per text node.
+`href`/`src` must be relative or `http`/`https`/`mailto` — `javascript:` and `data:` are
+rejected.
 
 ## Taxonomy — `/api/v1`
 
@@ -109,15 +106,13 @@ All JWT.
 | POST   | `/media/upload` | Multipart image upload → `{ id, url, mime_type, size_bytes, filename }`. |
 | GET    | `/media`        | List caller's uploads. Query: `page`, `limit` (≤100).                    |
 
-Allowed: JPEG, PNG, WebP, GIF, AVIF. The type is read from the file's own bytes,
-not from the sent `Content-Type` or the filename, and the stored name and
-extension come from that — anything else is `415`. SVG is not accepted (it can
-carry script). Over `MAX_UPLOAD_BYTES` is `413`.
+Allowed: JPEG, PNG, WebP, GIF, AVIF. The type is read from the file's bytes, not the
+`Content-Type` or filename — anything else is `415`. SVG is not accepted. Over
+`MAX_UPLOAD_BYTES` is `413`.
 
-The validated bytes are uploaded to S3 under a random, opaque key. The bucket stays
-private: `url` points at the API's own `/media/<key>` route (`MEDIA_PUBLIC_BASE_URL`),
-which streams the object using the server's credentials. The original filename is
-kept for display only.
+Validated bytes go to S3 under a random key. The bucket stays private: `url` points at
+the API's `/media/<key>` route (`MEDIA_PUBLIC_BASE_URL`), which streams the object using
+the server's credentials. The original filename is kept for display only.
 
 ## Users — `/api/v1/users`
 
@@ -142,7 +137,7 @@ Max 20 active keys per user; past that, create returns `409`.
 
 ## Content API (headless) — `/api/v1/content`
 
-For an external site to read published content. All require `x-api-key`. Returns a
+For an external site to read published content. All require `x-api-key`; returns a
 flattened shape (`link`, `published_date`, `cover_image`, …).
 
 | Method | Path                   | Purpose                             |
@@ -154,8 +149,7 @@ flattened shape (`link`, `published_date`, `cover_image`, …).
 curl -H "x-api-key: czk_xxx" http://localhost:4000/api/v1/content/posts
 ```
 
-Getting a key, keeping it server-side, caching and rotation:
-[using the Content API](content-api.md).
+Keys, caching, rotation: [using the Content API](content-api.md).
 
 ## Other
 

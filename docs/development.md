@@ -1,20 +1,14 @@
 # Development Setup (Node.js)
 
-Runs the API, the public reader, and the admin console on your machine with hot
-reload, using Docker only for Postgres. For a deployed stack, see [deployment](deployment.md).
+Runs all three apps on your machine with hot reload, using Docker only for Postgres. For
+a deployed stack, see [deployment](deployment.md).
 
-## Prerequisites
-
-- Node.js 24+ (images use 26), npm 10+.
-- Docker (for the Postgres container).
-
-Layout:
+Prerequisites: Node.js 24+ (images use 26), npm 10+, Docker (for Postgres).
 
 ```text
 apps/api         Fastify + Prisma       (:4000)
 apps/web         Next.js public reader  (:3000)
 apps/dashboard   Next.js admin console  (:3001)
-package.json     root scripts orchestrate all three
 ```
 
 ## 1. Install
@@ -47,8 +41,7 @@ Full list: [environment](environment.md).
 npm run db:migrate     # prisma migrate dev — creates tables, generates client
 ```
 
-Other Prisma scripts: `db:deploy` (apply existing), `db:generate` (client only),
-`db:studio` (browse data).
+Also: `db:deploy` (apply existing), `db:generate` (client only), `db:studio` (browse).
 
 ## 5. Run
 
@@ -57,8 +50,7 @@ npm run dev            # API + reader + console together
 # or: npm run dev:api / npm run dev:web / npm run dev:dashboard
 ```
 
-Blog `http://localhost:3000`, admin console `http://localhost:3001`, API
-`http://localhost:4000` (`/health` to check).
+Reader `:3000`, console `:3001`, API `:4000` (`/health` to check).
 
 ## 6. First user
 
@@ -68,8 +60,7 @@ curl -X POST http://localhost:4000/api/v1/auth/bootstrap \
   -d '{"email":"dev@example.com","password":"devpassword","name":"Dev"}'
 ```
 
-Or use the admin console's first-run sign-up at `http://localhost:3001/signup`, then
-log in at `http://localhost:3001/login`.
+Or use the console's first-run sign-up at `http://localhost:3001/signup`.
 
 ## Scripts (root)
 
@@ -100,6 +91,6 @@ log in at `http://localhost:3001/login`.
 | `apps/dashboard/src/components/`   | Editor, forms, nav.                         |
 | `apps/dashboard/src/lib/api.ts`    | Client API helper, session.                 |
 
-Schema change: edit `schema.prisma`, run `npm run db:migrate`. The generated client
-lands in `apps/api/src/generated/prisma` (committed). Reset the dev DB:
-`npm run db:down`, `docker compose down -v`, then `db:up` and `db:migrate`.
+Schema change: edit `schema.prisma`, run `npm run db:migrate`. The generated client lands
+in `apps/api/src/generated/prisma` (committed). Reset the dev DB: `npm run db:down`,
+`docker compose down -v`, then `db:up` and `db:migrate`.

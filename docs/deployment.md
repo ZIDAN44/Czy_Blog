@@ -1,7 +1,6 @@
 # Production Deployment (Docker Compose)
 
-Four containers — Postgres, API, the public reader, and the admin console — from
-pre-built GHCR images. Migrations run automatically on API startup, so there is no
+Four containers from pre-built GHCR images. Migrations run on API startup — no
 separate migration step.
 
 | Container           | Image                                      | Host port |
@@ -11,11 +10,11 @@ separate migration step.
 | `czyblog-web`       | `ghcr.io/zidan44/czyblog-web:latest`       | 3000      |
 | `czyblog-dashboard` | `ghcr.io/zidan44/czyblog-dashboard:latest` | 3001      |
 
-Named volumes: `czyblog_pgdata` (database), `czyblog_uploads` (media).
+Named volume: `czyblog_pgdata` (database). Media lives in S3, not a volume.
 
 ## Prerequisites
 
-- Docker Engine 24+ with Compose (`docker compose version`).
+- Docker Engine 24+ with Compose.
 - Ports 3000 and 3001 (and optionally 4000, 5432) free.
 
 ## 1. Get the files
@@ -38,10 +37,8 @@ POSTGRES_PORT=5432
 
 JWT_SECRET=CHANGE-ME-32+chars
 API_PORT=4000
-# Both front-end origins — the public reader and the admin console.
 CORS_ORIGINS=https://blog.example.com,https://admin.example.com
 TRUST_PROXY=false
-# The public reader's origin. Also baked into the console's links to the live site.
 PUBLIC_SITE_URL=https://blog.example.com
 
 S3_BUCKET=czyblog-media
@@ -55,16 +52,12 @@ WEB_PORT=3000
 DASHBOARD_PORT=3001
 ```
 
-Notes: `JWT_SECRET` must be ≥32 chars and not the example (else the API won't
-boot). `CORS_ORIGINS` must list real origins — `*` fails to boot in production.
-Set `TRUST_PROXY` once a reverse proxy is in front (see [step 5](#5-access)).
-
-Leave `DATABASE_URL` and `API_URL` at their shipped localhost values: Compose
-overrides both with the internal service hosts (`postgres`, `api`), so the same
-`.env` also works when you run the apps directly on a machine. To use an
-external database instead, set `DATABASE_URL` here **and** delete the
-`DATABASE_URL` line from the `api` service's `environment:` block in
-`docker-compose.yml`, which otherwise takes precedence.
+- `JWT_SECRET` ≥32 chars and not the example, else the API won't boot.
+- `CORS_ORIGINS` must be real origins — `*` fails to boot in production.
+- Leave `DATABASE_URL` and `API_URL` at their localhost values; Compose overrides both
+  with internal hosts (`postgres`, `api`). For an external database, set `DATABASE_URL`
+  here **and** delete the `DATABASE_URL` line from the `api` service in
+  `docker-compose.yml`, which otherwise wins.
 
 ## 3. Start
 
@@ -72,14 +65,13 @@ external database instead, set `DATABASE_URL` here **and** delete the
 docker compose up -d
 ```
 
-The API runs `prisma migrate deploy` on first boot
-([entrypoint](../apps/api/docker-entrypoint.sh)). Postgres health gates the API; the
-API gates the reader and the console. Check: `docker compose ps`, `docker compose logs -f api`.
+The API runs `prisma migrate deploy` on first boot. Postgres gates the API; the API
+gates the reader and console. Check: `docker compose ps`, `docker compose logs -f api`.
 
 ## 4. Create the first admin
 
-No public sign-up — bootstrap the first super admin via the admin console's first-run
-screen (`http://<host>:3001/signup`), or through its proxy:
+No public sign-up. Bootstrap via the console's first-run screen
+(`http://<host>:3001/signup`), or its proxy:
 
 ```bash
 curl -X POST http://localhost:3001/api-proxy/api/v1/auth/bootstrap \
@@ -87,24 +79,19 @@ curl -X POST http://localhost:3001/api-proxy/api/v1/auth/bootstrap \
   -d '{"email":"you@example.com","password":"a-strong-password","name":"You"}'
 ```
 
-Afterwards, add users from the console (Users).
+Add further users from the console (Users).
 
 ## 5. Access
 
-- Public reader (blog): `http://<host>:3000`
-- Admin console: `http://<host>:3001`
+- Reader: `http://<host>:3000`
+- Console: `http://<host>:3001`
 - API (optional): `http://<host>:4000`
-- RSS: `http://<host>:3000/rss.xml` (or the API directly at `:4000/rss.xml`)
+- RSS: `http://<host>:3000/rss.xml`
 
-For a real domain, put a reverse proxy with TLS in front of both apps — typically the
-reader on the apex/`www` and the console on its own host (e.g. `admin.example.com`) or
-path. Set `PUBLIC_SITE_URL` to the reader's URL so RSS links and the console's "View
-site" links resolve. The API usually need not be public — expose 4000 only for headless
-[content API](api.md#content-api-headless--apiv1content) clients.
-
-If the API is reached through that proxy, set
-[`TRUST_PROXY`](environment.md#trust_proxy) to the proxy's address or CIDR;
-otherwise rate limiting counts every request as coming from the proxy. Leave it
+For a real domain, put a reverse proxy with TLS in front of both apps. Set
+`PUBLIC_SITE_URL` to the reader's URL. Expose 4000 only for headless
+[content API](api.md#content-api-headless--apiv1content) clients. Behind the proxy, set
+[`TRUST_PROXY`](environment.md#trust_proxy) to the proxy's address/CIDR; leave it
 `false` while the API is only reachable inside the Compose network.
 
 ## Operations
@@ -117,14 +104,11 @@ otherwise rate limiting counts every request as coming from the proxy. Leave it
 | Stop (keep data)   | `docker compose down`                                    |
 | Stop and wipe data | `docker compose down -v`                                 |
 
-Backups (uploaded media lives in S3 — back it up with bucket versioning or a
-lifecycle/replication policy, not here):
+Database backup (media lives in S3 — back it up with bucket versioning):
 
 ```bash
 docker compose exec -T postgres pg_dump -U czyblog czyblog > backup-$(date +%F).sql
 ```
-
-Upgrades: migrations are idempotent, so `docker compose pull && docker compose up -d`.
 
 ## Troubleshooting
 
@@ -136,6 +120,5 @@ Upgrades: migrations are idempotent, so `docker compose pull && docker compose u
 | Everyone rate limited at once       | Set `TRUST_PROXY` to your proxy's address.                    |
 | Upload rejected with `415`          | Only JPEG, PNG, WebP, GIF, AVIF.                              |
 | Dashboard loads, API calls fail     | `API_URL` must be `http://api:4000`.                          |
-| CORS errors from a headless client  | Add its origin to `CORS_ORIGINS`.                             |
-| Upload fails                        | Check `S3_BUCKET`, `S3_ENDPOINT`, and the access credentials. |
 | Images 404 / don't load             | `MEDIA_PUBLIC_BASE_URL` must be the API's `/media` route.     |
+| Upload fails                        | Check `S3_BUCKET`, `S3_ENDPOINT`, and the access credentials. |
