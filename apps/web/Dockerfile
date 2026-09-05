@@ -21,8 +21,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY apps/web ./apps/web
 RUN npm run build:web
 
-# runner: minimal runtime image
-FROM base AS runner
+# runner: distroless Node 26 (no shell/npm, nonroot). `node` is the entrypoint.
+FROM gcr.io/distroless/nodejs26-debian13:nonroot AS runner
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
@@ -34,8 +34,6 @@ WORKDIR /app
 COPY --from=build /app/apps/web/.next/standalone ./
 COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
 
-USER node
-
 EXPOSE 3000
 
-CMD ["node", "apps/web/server.js"]
+CMD ["apps/web/server.js"]

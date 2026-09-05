@@ -21,8 +21,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY apps/dashboard ./apps/dashboard
 RUN npm run build:dashboard
 
-# runner: minimal runtime image
-FROM base AS runner
+# runner: distroless Node 26 (no shell/npm, nonroot). `node` is the entrypoint.
+FROM gcr.io/distroless/nodejs26-debian13:nonroot AS runner
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3001 \
@@ -34,8 +34,6 @@ WORKDIR /app
 COPY --from=build /app/apps/dashboard/.next/standalone ./
 COPY --from=build /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
 
-USER node
-
 EXPOSE 3001
 
-CMD ["node", "apps/dashboard/server.js"]
+CMD ["apps/dashboard/server.js"]

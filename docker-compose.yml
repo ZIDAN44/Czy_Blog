@@ -20,6 +20,23 @@ services:
       timeout: 5s
       retries: 10
 
+  # Applies pending DB migrations, then exits. The API waits for it to finish.
+  # Kept separate so the API runtime image can ship without the Prisma CLI.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migrator
+    image: czyblog-migrate
+    container_name: czyblog-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-czyblog}:${POSTGRES_PASSWORD:-czyblog}@postgres:5432/${POSTGRES_DB:-czyblog}?schema=public
+
   api:
     build:
       context: .
@@ -30,6 +47,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     env_file: .env
     environment:
       # `environment` wins over `env_file`: reach Postgres over the compose
