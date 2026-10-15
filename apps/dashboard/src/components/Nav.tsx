@@ -2,30 +2,59 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import {
+  ArrowUpRight,
+  ChevronsUpDown,
+  FileText,
+  KeyRound,
+  LayoutGrid,
+  LogOut,
+  Menu,
+  PenLine,
+  Settings,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import Logo from '@/components/Logo';
 import { Popover, Sheet } from '@/components/Overlay';
 import ThemeToggle from '@/components/ThemeToggle';
 import { clearSession, currentUser, logout, type SessionUser } from '@/lib/api';
 import { siteUrl } from '@/lib/site';
-import { useIsCompact, useMovingIndicator, useScrolled } from '@/lib/useMotion';
+import { useMediaQuery, useScrolled } from '@/lib/useMotion';
 import { initials } from '@/lib/utils';
 
 interface NavLink {
   href: string;
   label: string;
+  icon: LucideIcon;
 }
 
+const ROLE_LABEL: Record<string, string> = {
+  SUPER_ADMIN: 'Super admin',
+  EDITOR: 'Editor',
+  AUTHOR: 'Author',
+  CONTRIBUTOR: 'Contributor',
+};
+
+// Sidebar on desktop; a top bar with a sheet menu below lg.
 export default function Nav() {
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const scrolled = useScrolled();
-  const compact = useIsCompact();
+  const desktop = useMediaQuery('(min-width: 1024px)');
 
   useEffect(() => {
     setUser(currentUser());
   }, []);
+
+  // A route change closes whichever menu led there.
+  useEffect(() => {
+    setMobileOpen(false);
+    setAccountOpen(false);
+  }, [pathname]);
 
   async function signOut() {
     // Clear the server cookie first, then the cached profile.
@@ -36,179 +65,204 @@ export default function Nav() {
 
   const canManageUsers = user && (user.role === 'SUPER_ADMIN' || user.role === 'EDITOR');
 
-  // Specific labels, not vague umbrellas — a destination should be predictable.
   const links: NavLink[] = [
-    { href: '/dashboard', label: 'Overview' },
-    { href: '/dashboard/posts', label: 'Posts' },
-    { href: '/dashboard/posts/new', label: 'Write' },
-    ...(canManageUsers ? [{ href: '/dashboard/users', label: 'Users' }] : []),
-    { href: '/dashboard/api-keys', label: 'API keys' },
+    { href: '/dashboard', label: 'Overview', icon: LayoutGrid },
+    { href: '/dashboard/posts', label: 'Posts', icon: FileText },
+    ...(canManageUsers ? [{ href: '/dashboard/users', label: 'Users', icon: Users }] : []),
+    { href: '/dashboard/api-keys', label: 'API keys', icon: KeyRound },
+    { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   ];
 
   const isActive = (href: string) =>
-    href === '/dashboard' ? pathname === href : pathname.startsWith(href);
-  const activeHref = links.find((l) => isActive(l.href))?.href ?? null;
+    href === '/dashboard'
+      ? pathname === href
+      : href === '/dashboard/posts'
+        ? pathname.startsWith(href) && pathname !== '/dashboard/posts/new'
+        : pathname.startsWith(href);
 
-  const menu = (
-    <AccountMenu user={user} onNavigate={() => setMenuOpen(false)} onSignOut={signOut} />
-  );
-
-  return (
-    <header
-      className="chrome sticky top-0 z-30"
-      data-scrolled={scrolled}
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
-    >
-      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center gap-6">
-        <Link href="/dashboard" className="flex items-center gap-2 group pressable">
-          <Logo className="w-7 h-7 text-content" />
-          <span className="font-semibold tracking-tight">Czy Blog</span>
-        </Link>
-
-        <NavRail links={links} activeHref={activeHref} className="hidden md:flex" />
-
-        <div className="ml-auto flex items-center gap-2">
-          <a
-            href={siteUrl()}
-            className="hidden sm:inline-flex btn btn-ghost text-xs"
-            target="_blank"
-            rel="noreferrer"
-          >
-            View site ↗
-          </a>
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen((o) => !o)}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full hover:bg-fill-hover"
-            >
-              <span className="grid place-items-center w-7 h-7 rounded-full bg-inverse text-on-inverse text-xs font-semibold">
-                {initials(user?.name)}
-              </span>
-              <span className="hidden sm:block t-caption max-w-[10ch] truncate vibrant-secondary">
-                {user?.name}
-              </span>
-            </button>
-            {/* Grows out of the avatar it belongs to. */}
-            {!compact && (
-              <Popover
-                open={menuOpen}
-                onClose={() => setMenuOpen(false)}
-                origin="top right"
-                className="right-0 mt-2 w-60 p-1.5"
-              >
-                {menu}
-              </Popover>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* On a phone the same menu arrives as a sheet you can throw away. */}
-      {compact && (
-        <Sheet open={menuOpen} onClose={() => setMenuOpen(false)}>
-          {menu}
-        </Sheet>
-      )}
-
-      <NavRail
-        links={links}
-        activeHref={activeHref}
-        className="md:hidden overflow-x-auto px-4 pb-2"
-      />
-    </header>
-  );
-}
-
-function AccountMenu({
-  user,
-  onNavigate,
-  onSignOut,
-}: {
-  user: SessionUser | null;
-  onNavigate: () => void;
-  onSignOut: () => void;
-}) {
-  return (
-    <div role="menu">
-      <div className="px-3 py-2 border-b border-line mb-1">
-        <div className="t-subheading truncate">{user?.name}</div>
-        <div className="t-caption font-mono">{user?.role?.replace('_', ' ').toLowerCase()}</div>
-      </div>
-      <div className="px-3 pb-2">
-        <div className="t-label mb-1.5">Appearance</div>
-        <ThemeToggle />
-      </div>
-      <Link
-        href="/dashboard/settings"
-        role="menuitem"
-        onClick={onNavigate}
-        className="block t-body px-3 py-2 rounded-lg hover:bg-fill-hover text-content"
-      >
-        Account settings
-      </Link>
-      <a
-        href={siteUrl()}
-        role="menuitem"
-        target="_blank"
-        rel="noreferrer"
-        onClick={onNavigate}
-        className="block t-body px-3 py-2 rounded-lg hover:bg-fill-hover text-content sm:hidden"
-      >
-        View site ↗
-      </a>
-      <button
-        role="menuitem"
-        onClick={onSignOut}
-        className="w-full text-left t-body px-3 py-2 rounded-lg hover:bg-fill-hover text-content"
-      >
-        Sign out
-      </button>
-    </div>
-  );
-}
-
-// Active marker travels between destinations (via useMovingIndicator, shared with SegmentedControl).
-function NavRail({
-  links,
-  activeHref,
-  className = '',
-}: {
-  links: NavLink[];
-  activeHref: string | null;
-  className?: string;
-}) {
-  const {
-    trackRef,
-    indicatorRef: markerRef,
-    setItem,
-  } = useMovingIndicator<string, HTMLElement, HTMLSpanElement>(activeHref);
-
-  return (
-    <nav ref={trackRef} className={`relative items-center gap-1 flex text-sm ${className}`}>
-      <span
-        ref={markerRef}
-        aria-hidden
-        className="absolute inset-y-0 left-0 rounded-lg bg-inverse will-move"
-        style={{ opacity: 0 }}
-      />
+  const navList = (
+    <nav className="flex flex-col gap-0.5">
       {links.map((l) => {
-        const active = l.href === activeHref;
+        const active = isActive(l.href);
+        const Icon = l.icon;
         return (
           <Link
             key={l.href}
-            ref={setItem(l.href)}
             href={l.href}
             aria-current={active ? 'page' : undefined}
-            className={`relative z-10 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors ${
-              active ? 'text-on-inverse' : 'text-content-secondary hover:text-content'
+            className={`group flex items-center gap-2.5 h-9 px-2.5 rounded-lg text-sm ${
+              active
+                ? 'bg-fill-active text-content font-medium'
+                : 'text-content-secondary hover:text-content hover:bg-fill-hover'
             }`}
           >
+            <Icon
+              className={`w-4 h-4 ${active ? 'text-content' : 'text-content-tertiary group-hover:text-content-secondary'}`}
+              strokeWidth={active ? 2.2 : 1.9}
+            />
             {l.label}
           </Link>
         );
       })}
     </nav>
+  );
+
+  const writeButton = (
+    <Link
+      href="/dashboard/posts/new"
+      className={`btn btn-primary w-full justify-start ${pathname === '/dashboard/posts/new' ? 'opacity-90' : ''}`}
+    >
+      <PenLine /> New post
+    </Link>
+  );
+
+  const account = (
+    <div role="menu" className="p-1">
+      <div className="px-2.5 pt-2 pb-3">
+        <div className="t-subheading truncate">{user?.name}</div>
+        <div className="t-caption truncate">{user?.email}</div>
+      </div>
+      <div className="px-2.5 pb-3 border-b border-line mb-1">
+        <div className="t-label mb-2">Appearance</div>
+        <ThemeToggle />
+      </div>
+      <a
+        href={siteUrl()}
+        role="menuitem"
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-2.5 h-9 px-2.5 rounded-lg text-sm text-content hover:bg-fill-hover"
+      >
+        <ArrowUpRight className="w-4 h-4 text-content-tertiary" /> View site
+      </a>
+      <button
+        role="menuitem"
+        onClick={signOut}
+        className="w-full flex items-center gap-2.5 h-9 px-2.5 rounded-lg text-sm text-content hover:bg-fill-hover active:!scale-100"
+      >
+        <LogOut className="w-4 h-4 text-content-tertiary" /> Sign out
+      </button>
+    </div>
+  );
+
+  const avatar = (
+    <span className="grid place-items-center w-8 h-8 shrink-0 rounded-full bg-accent-soft text-accent-content text-xs font-semibold">
+      {initials(user?.name)}
+    </span>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-64 flex-col border-r border-line bg-surface-sunken/60">
+        <Link href="/dashboard" className="flex items-center gap-2.5 h-16 px-5 shrink-0">
+          <Logo size={28} />
+          <span className="leading-tight">
+            <span className="block font-serif text-[1.1875rem] font-medium tracking-[-0.015em]">
+              Czy Blog
+            </span>
+          </span>
+        </Link>
+        <div className="px-3 pt-2 space-y-5 flex-1 overflow-y-auto">
+          {writeButton}
+          <div>
+            <div className="t-label px-2.5 mb-1.5">Workspace</div>
+            {navList}
+          </div>
+        </div>
+        <div className="p-3 border-t border-line">
+          <a
+            href={siteUrl()}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between h-9 px-2.5 mb-1 rounded-lg text-sm text-content-secondary hover:text-content hover:bg-fill-hover"
+          >
+            View site <ArrowUpRight className="w-4 h-4" />
+          </a>
+          <div className="relative">
+            <button
+              onClick={() => setAccountOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={accountOpen}
+              className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-fill-hover text-left active:!scale-100"
+            >
+              {avatar}
+              <span className="flex-1 min-w-0 leading-tight">
+                <span className="block text-sm font-medium truncate">{user?.name}</span>
+                <span className="block t-caption truncate">
+                  {user ? ROLE_LABEL[user.role] : ''}
+                </span>
+              </span>
+              <ChevronsUpDown className="w-4 h-4 text-content-tertiary" />
+            </button>
+            {desktop && (
+              <Popover
+                open={accountOpen}
+                onClose={() => setAccountOpen(false)}
+                origin="bottom left"
+                className="bottom-full left-0 mb-2 w-64"
+              >
+                {account}
+              </Popover>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile top bar */}
+      <header
+        className="lg:hidden chrome sticky top-0 z-30"
+        data-scrolled={scrolled}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <div className="h-14 px-4 flex items-center gap-3">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="btn btn-ghost btn-icon -ml-2"
+            aria-label="Open menu"
+          >
+            <Menu className="!w-5 !h-5" />
+          </button>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Logo size={26} />
+            <span className="font-serif text-lg font-medium tracking-[-0.015em]">Czy Blog</span>
+          </Link>
+          <Link href="/dashboard/posts/new" className="btn btn-primary btn-sm ml-auto">
+            <PenLine /> Write
+          </Link>
+        </div>
+      </header>
+
+      {!desktop && (
+        <Sheet open={mobileOpen} onClose={() => setMobileOpen(false)}>
+          <div className="space-y-4 pb-2">
+            <div className="flex items-center gap-3">
+              {avatar}
+              <div className="min-w-0 leading-tight">
+                <div className="t-subheading truncate">{user?.name}</div>
+                <div className="t-caption">{user ? ROLE_LABEL[user.role] : ''}</div>
+              </div>
+            </div>
+            {navList}
+            <div className="border-t border-line pt-3 space-y-3">
+              <ThemeToggle />
+              <div className="flex gap-2">
+                <a
+                  href={siteUrl()}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary flex-1"
+                >
+                  <ArrowUpRight /> View site
+                </a>
+                <button onClick={signOut} className="btn btn-secondary flex-1">
+                  <LogOut /> Sign out
+                </button>
+              </div>
+            </div>
+          </div>
+        </Sheet>
+      )}
+    </>
   );
 }

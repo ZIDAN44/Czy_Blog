@@ -3,17 +3,16 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
 import { ToastProvider } from '@/components/Toast';
+import { fontVariables } from '@/lib/fonts';
 import { THEME_BOOTSTRAP } from '@/lib/theme';
 
 export const metadata: Metadata = {
-  title: 'Czy Blog | Dashboard',
+  title: { default: 'Dashboard · Czy Blog', template: '%s · Czy Blog' },
   description: 'Write and publish to Czy Blog',
 };
 
 export const viewport: Viewport = {
-  // Let the page reach under the notch so translucent chrome can float over it.
   viewportFit: 'cover',
-  // theme-color is a single unmediated meta below, resolved by the bootstrap script (see THEME_BOOTSTRAP).
 };
 
 // Read PUBLIC_SITE_URL per request so prebuilt images pick it up at runtime.
@@ -23,12 +22,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // Exposed to the client (site.ts) for links back to the reader.
   const siteUrl = process.env.PUBLIC_SITE_URL ?? 'http://localhost:3000';
   return (
-    // No webfont round-trip — the platform font already carries optical sizing and tracking.
-    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={fontVariables}
+      suppressHydrationWarning
+    >
       <head>
-        <meta name="theme-color" content="#fafafa" />
-        {/* Applies the stored theme before first paint (else a dark-mode flash).
-            Via next/script so React doesn't re-render it client-side, where it wouldn't run. */}
+        <meta name="theme-color" content="#fbfaf7" />
+        {/* Applies the stored theme before first paint (no dark-mode flash). */}
         <Script
           id="theme-bootstrap"
           strategy="beforeInteractive"

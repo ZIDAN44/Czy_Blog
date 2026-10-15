@@ -1,18 +1,30 @@
 'use client';
-import { useState } from 'react';
-import { changePassword, setSession } from '@/lib/api';
+import { useEffect, useState } from 'react';
+import { changePassword, currentUser, setSession, type SessionUser } from '@/lib/api';
+import PageHeader from '@/components/PageHeader';
+import ThemeToggle from '@/components/ThemeToggle';
 import { useToast } from '@/components/Toast';
-import { errMsg } from '@/lib/utils';
+import { errMsg, initials } from '@/lib/utils';
+
+const ROLE_NAME: Record<string, string> = {
+  SUPER_ADMIN: 'Super admin',
+  EDITOR: 'Editor',
+  AUTHOR: 'Author',
+  CONTRIBUTOR: 'Contributor',
+};
 
 export default function SettingsPage() {
   const toast = useToast();
+  const [me, setMe] = useState<SessionUser | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Validated as you type, not saved up to be sprung on you at submit.
+  useEffect(() => setMe(currentUser()), []);
+
+  // Validated as you type, not sprung on you at submit.
   const tooShort = newPassword.length > 0 && newPassword.length < 8;
   const mismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
   const ready =
@@ -43,73 +55,107 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="t-display">Settings</h1>
-        <p className="t-secondary mt-1 max-w-xl">Manage your account.</p>
-      </header>
+    <div className="max-w-4xl">
+      <PageHeader title="Settings" description="Your account and how the dashboard looks." />
 
-      <section className="card p-5">
-        <h2 className="t-label">Change password</h2>
-        <form onSubmit={submit} className="mt-4 max-w-sm space-y-4">
-          <label className="block">
-            <span className="t-caption font-medium text-content-secondary">Current password</span>
-            <input
-              className="input mt-1"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
-          </label>
-          <label className="block">
-            <span className="t-caption font-medium text-content-secondary">New password</span>
-            <input
-              className="input mt-1"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={8}
-              maxLength={72}
-              autoComplete="new-password"
-              aria-invalid={tooShort}
-              placeholder="At least 8 characters"
-            />
-            {tooShort && (
-              <span className="t-caption text-warning-content mt-1 block">
-                8 characters minimum.
-              </span>
-            )}
-          </label>
-          <label className="block">
-            <span className="t-caption font-medium text-content-secondary">
-              Confirm new password
+      <div className="divide-y divide-line">
+        <Row title="Profile" hint="How you appear on posts you publish.">
+          <div className="card p-4 flex items-center gap-4">
+            <span className="grid place-items-center w-12 h-12 rounded-full bg-accent-soft text-accent-content font-semibold">
+              {initials(me?.name)}
             </span>
-            <input
-              className="input mt-1"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={8}
-              maxLength={72}
-              autoComplete="new-password"
-              aria-invalid={mismatch}
-            />
-            {mismatch && (
-              <span className="t-caption text-warning-content mt-1 block">
-                These two do not match yet.
-              </span>
-            )}
-          </label>
-          {error && <p className="note note-danger t-body">{error}</p>}
-          <button disabled={busy || !ready} className="btn btn-primary">
-            {busy ? 'Saving…' : 'Update password'}
-          </button>
-        </form>
-      </section>
+            <div className="min-w-0 leading-tight">
+              <div className="t-subheading truncate">{me?.name}</div>
+              <div className="t-caption truncate mt-1">{me?.email}</div>
+            </div>
+            <span className="ml-auto tag">{me ? ROLE_NAME[me.role] : ''}</span>
+          </div>
+        </Row>
+
+        <Row title="Appearance" hint="Follows your system by default.">
+          <ThemeToggle />
+        </Row>
+
+        <Row title="Password" hint="At least 8 characters. Changing it signs out other sessions.">
+          <form onSubmit={submit} className="card p-5 space-y-4">
+            <label className="block">
+              <span className="field-label">Current password</span>
+              <input
+                className="input"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </label>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label className="block">
+                <span className="field-label">New password</span>
+                <input
+                  className="input"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  maxLength={72}
+                  autoComplete="new-password"
+                  aria-invalid={tooShort}
+                />
+                {tooShort && (
+                  <span className="field-hint !text-warning-content">8 characters minimum.</span>
+                )}
+              </label>
+              <label className="block">
+                <span className="field-label">Confirm new password</span>
+                <input
+                  className="input"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  maxLength={72}
+                  autoComplete="new-password"
+                  aria-invalid={mismatch}
+                />
+                {mismatch && (
+                  <span className="field-hint !text-warning-content">
+                    These don&apos;t match yet.
+                  </span>
+                )}
+              </label>
+            </div>
+            {error && <p className="note note-danger">{error}</p>}
+            <div className="flex justify-end pt-1">
+              <button disabled={busy || !ready} className="btn btn-primary">
+                {busy ? 'Saving…' : 'Update password'}
+              </button>
+            </div>
+          </form>
+        </Row>
+      </div>
     </div>
+  );
+}
+
+function Row({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="grid gap-4 md:grid-cols-[14rem_1fr] py-8 first:pt-0">
+      <div>
+        <h2 className="t-heading">{title}</h2>
+        <p className="t-caption mt-1">{hint}</p>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </section>
   );
 }

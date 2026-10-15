@@ -1,8 +1,23 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import {
+  Archive,
+  ArrowRight,
+  ArrowUpRight,
+  CalendarClock,
+  CircleCheck,
+  Eye,
+  FilePen,
+  KeyRound,
+  PenLine,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { api, currentUser, type PostStatus } from '@/lib/api';
-import { STATUS_LABEL, STATUS_PILL, errMsg } from '@/lib/utils';
+import { siteUrl } from '@/lib/site';
+import { STATUS_LABEL, STATUS_NAME, STATUS_PILL, errMsg, relativeTime } from '@/lib/utils';
 
 interface PostSummary {
   id: string;
@@ -13,20 +28,27 @@ interface PostSummary {
   updated_at: string;
 }
 
-// Each tile's glow is the status colour itself, so it re-tints with the theme. (Labels come from STATUS_LABEL.)
-const STATUS_GLOW: Record<PostStatus, string> = {
-  DRAFT: 'var(--color-content-tertiary)',
-  PENDING_REVIEW: 'var(--color-warning)',
-  SCHEDULED: 'var(--color-info-content)',
-  PUBLISHED: 'var(--color-success)',
-  ARCHIVED: 'var(--color-danger)',
+const STATUS_ICON: Record<PostStatus, LucideIcon> = {
+  DRAFT: FilePen,
+  PENDING_REVIEW: Eye,
+  SCHEDULED: CalendarClock,
+  PUBLISHED: CircleCheck,
+  ARCHIVED: Archive,
+};
+
+const STATUS_TINT: Record<PostStatus, string> = {
+  DRAFT: 'text-content-secondary',
+  PENDING_REVIEW: 'text-warning-content',
+  SCHEDULED: 'text-info-content',
+  PUBLISHED: 'text-success-content',
+  ARCHIVED: 'text-content-tertiary',
 };
 
 const emptyCounts = (): Record<PostStatus, number> => ({
+  PUBLISHED: 0,
   DRAFT: 0,
   PENDING_REVIEW: 0,
   SCHEDULED: 0,
-  PUBLISHED: 0,
   ARCHIVED: 0,
 });
 
@@ -58,7 +80,7 @@ export default function Overview() {
     load();
   }, [load]);
 
-  const recent = (filter ? allPosts.filter((p) => p.status === filter) : allPosts).slice(0, 6);
+  const recent = (filter ? allPosts.filter((p) => p.status === filter) : allPosts).slice(0, 7);
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 5) return 'Up late';
@@ -66,79 +88,74 @@ export default function Overview() {
     if (h < 18) return 'Good afternoon';
     return 'Good evening';
   })();
+  const canManageUsers = me?.role === 'SUPER_ADMIN' || me?.role === 'EDITOR';
 
   return (
-    <div className="space-y-10">
-      <header className="flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <p className="t-secondary">{greeting}</p>
-          <h1 className="t-display mt-0.5">{me?.name?.split(' ')[0]}</h1>
-        </div>
-        <Link href="/dashboard/posts/new" className="btn btn-primary">
-          <span aria-hidden>+</span> New post
-        </Link>
-      </header>
+    <div>
+      <PageHeader
+        eyebrow={greeting}
+        title={me?.name?.split(' ')[0] ?? 'Welcome'}
+        description="Here's where your writing stands today."
+        actions={
+          // The mobile top bar already carries "Write".
+          <Link href="/dashboard/posts/new" className="btn btn-primary max-lg:hidden">
+            <PenLine /> New post
+          </Link>
+        }
+      />
 
-      {/* Counts double as filters. */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 stagger">
+      {/* Counts double as filters for the list below. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 stagger">
         {(Object.keys(counts) as PostStatus[]).map((k) => {
-          const glow = STATUS_GLOW[k];
           const active = filter === k;
+          const Icon = STATUS_ICON[k];
           return (
             <button
               key={k}
               type="button"
               aria-pressed={active}
               onClick={() => setFilter(active ? null : k)}
-              className={`group relative overflow-hidden text-left rounded-2xl p-4 transition-colors ${
+              className={`text-left rounded-xl p-4 border active:!scale-[0.985] ${
                 active
-                  ? 'bg-inverse text-on-inverse border border-inverse shadow-[var(--shadow-raised)]'
-                  : 'card hover-lift'
+                  ? 'bg-inverse text-on-inverse border-inverse'
+                  : 'bg-surface border-line shadow-[var(--shadow-card)] hover:border-line-strong'
               }`}
             >
-              {!active && (
-                <div
-                  className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-40 blur-2xl"
-                  style={{ background: glow }}
-                  aria-hidden
-                />
-              )}
-              <div className="relative">
-                <div className={`t-label ${active ? 'text-on-inverse opacity-65' : ''}`}>
+              <div className="flex items-center justify-between">
+                <span
+                  className={`text-[0.8125rem] font-medium ${active ? 'opacity-75' : 'text-content-secondary'}`}
+                >
                   {STATUS_LABEL[k]}
-                </div>
-                <div className="mt-2 text-3xl font-semibold tracking-[-0.02em] leading-none">
-                  {loading ? <span className="skeleton block h-8 w-10" aria-hidden /> : counts[k]}
-                </div>
+                </span>
+                <Icon className={`w-4 h-4 ${active ? 'opacity-75' : STATUS_TINT[k]}`} />
+              </div>
+              <div className="mt-3 text-[1.75rem] font-semibold tracking-[-0.03em] leading-none tabular-nums">
+                {loading ? <span className="skeleton block h-7 w-8" aria-hidden /> : counts[k]}
               </div>
             </button>
           );
         })}
       </div>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="t-heading">Recent posts</h2>
-            {filter && (
-              <p className="t-caption mt-0.5">
-                Showing {STATUS_LABEL[filter].toLowerCase()} ·{' '}
-                <button onClick={() => setFilter(null)} className="underline underline-offset-2">
-                  show all
+      <div className="mt-10 grid gap-6 xl:grid-cols-[1fr_18rem]">
+        <section className="card overflow-hidden">
+          <div className="flex items-center justify-between gap-4 px-5 h-14 border-b border-line">
+            <div className="flex items-center gap-2">
+              <h2 className="t-heading">{filter ? STATUS_LABEL[filter] : 'Recent activity'}</h2>
+              {filter && (
+                <button onClick={() => setFilter(null)} className="btn btn-ghost btn-sm">
+                  Clear
                 </button>
-              </p>
-            )}
+              )}
+            </div>
+            <Link href="/dashboard/posts" className="btn btn-ghost btn-sm">
+              All posts <ArrowRight />
+            </Link>
           </div>
-          <Link href="/dashboard/posts" className="t-caption hover:text-content">
-            All posts →
-          </Link>
-        </div>
 
-        <div className="card divide-y divide-line overflow-hidden">
-          {/* A failure says what happened and offers the way out of it. */}
           {error && !loading && (
-            <div className="px-5 py-12 text-center space-y-3">
-              <p className="t-body text-content">{error}</p>
+            <div className="px-5 py-14 text-center space-y-3">
+              <p className="t-body">{error}</p>
               <button onClick={load} className="btn btn-secondary">
                 Try again
               </button>
@@ -146,50 +163,121 @@ export default function Overview() {
           )}
 
           {loading &&
-            [0, 1, 2].map((i) => (
-              <div key={i} className="px-5 py-4 flex items-center gap-4">
+            [0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="px-5 py-4 flex items-center gap-4 border-b border-line last:border-0"
+              >
                 <div className="flex-1 space-y-2">
-                  <div className="skeleton h-4 w-1/3" />
-                  <div className="skeleton h-3 w-1/5" />
+                  <div className="skeleton h-4 w-2/5" />
+                  <div className="skeleton h-3 w-1/4" />
                 </div>
                 <div className="skeleton h-5 w-20 rounded-full" />
               </div>
             ))}
 
           {!loading && !error && recent.length === 0 && (
-            <div className="px-5 py-14 text-center">
+            <div className="px-5 py-16 text-center">
               <p className="t-body text-content-secondary">
                 {filter
                   ? `Nothing ${STATUS_LABEL[filter].toLowerCase()} right now.`
                   : 'No posts yet.'}
               </p>
               <Link href="/dashboard/posts/new" className="btn btn-primary mt-4">
-                Write your first post
+                <PenLine /> Write your first post
               </Link>
             </div>
           )}
 
-          {!loading &&
-            recent.map((p) => (
-              <Link
-                key={p.id}
-                href={`/dashboard/posts/${p.id}/edit`}
-                className="flex items-center gap-4 px-5 py-3.5 hover:bg-fill-hover"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="t-subheading truncate">{p.title || 'Untitled'}</div>
-                  <div className="t-caption mt-0.5 font-mono truncate">/{p.slug}</div>
-                </div>
-                <span className={`pill ${STATUS_PILL[p.status]}`}>
-                  {p.status.replace('_', ' ')}
-                </span>
-                <span className="t-caption hidden sm:inline tabular-nums">
-                  {new Date(p.updated_at).toLocaleDateString()}
-                </span>
-              </Link>
-            ))}
-        </div>
-      </section>
+          {!loading && (
+            <ul>
+              {recent.map((p) => (
+                <li key={p.id} className="border-b border-line last:border-0">
+                  <Link
+                    href={`/dashboard/posts/${p.id}/edit`}
+                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-fill-hover"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{p.title || 'Untitled'}</div>
+                      <div className="t-caption mt-0.5 truncate">
+                        Edited {relativeTime(p.updated_at)}
+                      </div>
+                    </div>
+                    <span className={`pill ${STATUS_PILL[p.status]}`}>{STATUS_NAME[p.status]}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <aside className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 content-start">
+          <h2 className="t-label px-1 sm:col-span-2 xl:col-span-1">Shortcuts</h2>
+          <Shortcut
+            href="/dashboard/posts/new"
+            icon={PenLine}
+            title="Write a post"
+            hint="Start a new draft"
+          />
+          {canManageUsers && (
+            <Shortcut
+              href="/dashboard/users"
+              icon={Users}
+              title="Manage people"
+              hint="Roles and accounts"
+            />
+          )}
+          <Shortcut
+            href="/dashboard/api-keys"
+            icon={KeyRound}
+            title="API keys"
+            hint="Read posts from other apps"
+          />
+          <Shortcut
+            href={siteUrl()}
+            external
+            icon={ArrowUpRight}
+            title="View the blog"
+            hint="See it as readers do"
+          />
+        </aside>
+      </div>
     </div>
+  );
+}
+
+function Shortcut({
+  href,
+  icon: Icon,
+  title,
+  hint,
+  external,
+}: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  hint: string;
+  external?: boolean;
+}) {
+  const body = (
+    <>
+      <span className="grid place-items-center w-9 h-9 rounded-lg bg-surface-sunken ring-1 ring-line text-content-secondary group-hover:text-content">
+        <Icon className="w-4 h-4" />
+      </span>
+      <span className="min-w-0 leading-tight">
+        <span className="block text-sm font-medium">{title}</span>
+        <span className="block t-caption mt-0.5">{hint}</span>
+      </span>
+    </>
+  );
+  const cls = 'group card flex items-center gap-3 p-3 hover:border-line-strong';
+  return external ? (
+    <a href={href} target="_blank" rel="noreferrer" className={cls}>
+      {body}
+    </a>
+  ) : (
+    <Link href={href} className={cls}>
+      {body}
+    </Link>
   );
 }

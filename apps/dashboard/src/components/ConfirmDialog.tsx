@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Modal, Sheet } from '@/components/Overlay';
 import { useIsCompact } from '@/lib/useMotion';
+import { CircleCheck, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
 
 export type ConfirmTone = 'default' | 'danger' | 'warning' | 'success';
 
@@ -44,18 +45,22 @@ export function useNotify() {
   return ctx.notify;
 }
 
-const TONE_STYLES: Record<ConfirmTone, { btn: string; ring: string; icon: string }> = {
-  default: { btn: 'btn-primary', ring: 'bg-accent-soft text-accent-content', icon: 'i' },
+const TONE_STYLES: Record<ConfirmTone, { btn: string; ring: string; icon: LucideIcon }> = {
+  default: {
+    btn: 'btn-primary',
+    ring: 'bg-surface-sunken text-content-secondary ring-1 ring-line',
+    icon: Info,
+  },
   danger: {
     btn: 'btn-tone-danger',
     ring: 'bg-danger-soft text-danger-content',
-    icon: '!',
+    icon: TriangleAlert,
   },
-  warning: { btn: 'btn-warn', ring: 'bg-warning-soft text-warning-content', icon: '!' },
+  warning: { btn: 'btn-warn', ring: 'bg-warning-soft text-warning-content', icon: TriangleAlert },
   success: {
     btn: 'btn-tone-success',
     ring: 'bg-success-soft text-success-content',
-    icon: '✓',
+    icon: CircleCheck,
   },
 };
 
@@ -100,10 +105,10 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     <>
       <div className="flex items-start gap-4">
         <div
-          className={`flex-shrink-0 w-10 h-10 rounded-full grid place-items-center font-bold ${tone.ring}`}
+          className={`flex-shrink-0 w-10 h-10 rounded-full grid place-items-center ${tone.ring}`}
           aria-hidden
         >
-          {tone.icon}
+          <tone.icon className="w-[18px] h-[18px]" />
         </div>
         <div className="flex-1 min-w-0">
           <h2 id="confirm-title" className="t-heading text-content">

@@ -1,10 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Trash2, UserPlus } from 'lucide-react';
 import { api, currentUser, type Role } from '@/lib/api';
 import { useConfirm, useNotify } from '@/components/ConfirmDialog';
+import { Modal } from '@/components/Overlay';
+import PageHeader from '@/components/PageHeader';
 import { useToast } from '@/components/Toast';
-import { errMsg, initials } from '@/lib/utils';
+import { errMsg, formatDate, initials } from '@/lib/utils';
 
 interface UserRow {
   id: string;
@@ -16,6 +19,13 @@ interface UserRow {
 
 const ROLES: Role[] = ['SUPER_ADMIN', 'EDITOR', 'AUTHOR', 'CONTRIBUTOR'];
 
+const ROLE_NAME: Record<Role, string> = {
+  SUPER_ADMIN: 'Super admin',
+  EDITOR: 'Editor',
+  AUTHOR: 'Author',
+  CONTRIBUTOR: 'Contributor',
+};
+
 const ROLE_DESCRIPTIONS: Record<Role, string> = {
   SUPER_ADMIN: 'Full access. Manages users, roles, and site settings.',
   EDITOR: 'Reviews, edits, and publishes any post. Manages categories.',
@@ -23,12 +33,14 @@ const ROLE_DESCRIPTIONS: Record<Role, string> = {
   CONTRIBUTOR: 'Writes drafts. An editor or admin must approve and publish.',
 };
 
-const ROLE_COLOR: Record<Role, string> = {
-  SUPER_ADMIN: 'bg-accent-soft text-accent-content border-transparent',
-  EDITOR: 'bg-info-soft text-info-content border-transparent',
-  AUTHOR: 'bg-success-soft text-success-content border-transparent',
-  CONTRIBUTOR: 'bg-surface-sunken text-content-secondary border-transparent',
+const ROLE_DOT: Record<Role, string> = {
+  SUPER_ADMIN: 'bg-accent',
+  EDITOR: 'bg-info',
+  AUTHOR: 'bg-success',
+  CONTRIBUTOR: 'bg-content-tertiary',
 };
+
+const EMPTY_FORM = { email: '', name: '', password: '', role: '' as Role | '' };
 
 export default function UsersPage() {
   const router = useRouter();
@@ -37,13 +49,9 @@ export default function UsersPage() {
   const toast = useToast();
   const me = currentUser();
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    email: '',
-    name: '',
-    password: '',
-    role: '' as Role | '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -59,7 +67,9 @@ export default function UsersPage() {
       const { data } = await api<{ data: UserRow[] }>('/api/v1/users');
       setUsers(data);
     } catch (e) {
-      setError(errMsg(e, 'Failed to load users'));
+      toast({ title: 'Could not load users', message: errMsg(e, ''), tone: 'error' });
+    } finally {
+      setLoading(false);
     }
   }
   useEffect(() => {
@@ -68,13 +78,6 @@ export default function UsersPage() {
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
-    const ok = await confirm({
-      title: 'Create this account?',
-      message: `${form.name} <${form.email}> will be added as ${form.role}. They can sign in immediately with the password you set.`,
-      confirmLabel: 'Create account',
-      tone: 'success',
-    });
-    if (!ok) return;
     setBusy(true);
     setError(null);
     try {
@@ -84,7 +87,7 @@ export default function UsersPage() {
         message: `${form.name} can sign in now.`,
         tone: 'success',
       });
-      setForm({ email: '', name: '', password: '', role: '' });
+      setForm(EMPTY_FORM);
       setShowCreate(false);
       load();
     } catch (e) {
@@ -99,7 +102,7 @@ export default function UsersPage() {
     if (user && user.role === role) return;
     const ok = await confirm({
       title: 'Change role?',
-      message: `${user?.name ?? 'This user'} will be changed from ${user?.role} to ${role}. Their permissions will update immediately.`,
+      message: `${user?.name ?? 'This user'} will change from ${user ? ROLE_NAME[user.role] : ''} to ${ROLE_NAME[role]}. Their permissions update immediately.`,
       confirmLabel: 'Change role',
       tone: 'warning',
     });
@@ -108,7 +111,7 @@ export default function UsersPage() {
       await api(`/api/v1/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
       toast({
         title: 'Role updated',
-        message: `${user?.name ?? 'User'} is now ${role}.`,
+        message: `${user?.name ?? 'User'} is now ${ROLE_NAME[role]}.`,
         tone: 'success',
       });
       load();
@@ -144,188 +147,244 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <header className="flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="t-display">Users</h1>
-          <p className="t-secondary mt-1 max-w-xl">
-            {isSuper
-              ? 'Create accounts for editors, authors, and contributors. Assign roles based on what each person should do.'
-              : 'You can see all users on the platform. Only a super admin can create or change accounts.'}
-          </p>
-        </div>
-        {isSuper && (
-          <button onClick={() => setShowCreate((v) => !v)} className="btn btn-primary">
-            <span aria-hidden>+</span> {showCreate ? 'Close' : 'Add user'}
-          </button>
-        )}
-      </header>
-
-      <section className="card p-5">
-        <h2 className="t-label mb-3">What each role can do</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 t-body">
-          {ROLES.map((r) => (
-            <div key={r} className="flex items-start gap-3">
-              <span
-                className={`pill border ${ROLE_COLOR[r]} flex-shrink-0`}
-                style={{ textTransform: 'none' }}
-              >
-                {r.replace('_', ' ')}
-              </span>
-              <p className="text-content-secondary">{ROLE_DESCRIPTIONS[r]}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {isSuper && showCreate && (
-        <section className="card p-5 space-y-3 animate-slideUp">
-          <h2 className="t-heading">Create user</h2>
-          {error && <p className="note note-danger t-body">{error}</p>}
-          <form
-            onSubmit={createUser}
-            className="grid grid-cols-1 md:grid-cols-5 gap-2"
-            autoComplete="off"
-            data-form-type="other"
-            data-1p-ignore
-            data-lpignore="true"
-            data-bwignore="true"
-          >
-            {/* Decoy fields to throw off aggressive password managers */}
-            <input
-              type="text"
-              name="username"
-              autoComplete="username"
-              tabIndex={-1}
-              aria-hidden="true"
-              className="hidden"
-            />
-            <input
-              type="password"
-              name="password"
-              autoComplete="new-password"
-              tabIndex={-1}
-              aria-hidden="true"
-              className="hidden"
-            />
-
-            <input
-              className="input md:col-span-1"
-              placeholder="Name"
-              name="cz-create-name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-bwignore="true"
-              data-form-type="other"
-            />
-            <input
-              className="input md:col-span-2"
-              type="text"
-              inputMode="email"
-              placeholder="Email"
-              name="cz-create-account-handle"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-bwignore="true"
-              data-form-type="other"
-            />
-            <input
-              className="input md:col-span-1 font-mono tracking-widest"
-              type="text"
-              placeholder="Password (8+)"
-              name="cz-create-secret-token"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              minLength={8}
-              maxLength={72}
-              required
-              autoComplete="off"
-              data-1p-ignore
-              data-lpignore="true"
-              data-bwignore="true"
-              data-form-type="other"
-              style={{ WebkitTextSecurity: 'disc', textSecurity: 'disc' } as React.CSSProperties}
-            />
-            <select
-              className="input"
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-              required
-            >
-              <option value="" disabled>
-                Select role…
-              </option>
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-            <button disabled={busy || !form.role} className="btn btn-primary md:col-span-5">
-              {busy ? 'Creating…' : 'Create account'}
+    <div>
+      <PageHeader
+        title="Users"
+        description={
+          isSuper
+            ? 'Invite people and give each one the access they need.'
+            : 'Everyone with access to this blog. Only a super admin can change accounts.'
+        }
+        actions={
+          isSuper && (
+            <button onClick={() => setShowCreate(true)} className="btn btn-primary">
+              <UserPlus /> Add user
             </button>
-          </form>
-        </section>
-      )}
+          )
+        }
+      />
 
-      <section className="card divide-y divide-line overflow-hidden">
-        {users.map((u) => (
-          <div key={u.id} className="px-5 py-4 flex items-center gap-4">
-            <span className="grid place-items-center w-9 h-9 rounded-full bg-surface-sunken text-content-secondary text-xs font-semibold border border-line">
-              {initials(u.name)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="t-subheading flex items-center gap-2">
-                <span className="truncate">{u.name}</span>
-                {u.id === me?.id && (
-                  <span className="text-[10px] uppercase tracking-[0.09em] font-semibold text-accent bg-accent-soft border border-line rounded-full px-1.5 py-0.5">
-                    you
+      <div className="grid gap-6 xl:grid-cols-[1fr_17rem] items-start">
+        <section className="card overflow-hidden">
+          <div className="hidden sm:grid grid-cols-[1fr_10.5rem_6rem_2.5rem] gap-4 px-5 h-10 items-center border-b border-line bg-surface-sunken/50 t-label">
+            <span>Member</span>
+            <span>Role</span>
+            <span>Joined</span>
+            <span />
+          </div>
+          {loading &&
+            [0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="px-5 py-4 flex items-center gap-3 border-b border-line last:border-0"
+              >
+                <div className="skeleton w-9 h-9 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-4 w-1/4" />
+                  <div className="skeleton h-3 w-2/5" />
+                </div>
+              </div>
+            ))}
+          {users.map((u) => (
+            <div
+              key={u.id}
+              className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_10.5rem_6rem_2.5rem] gap-x-4 gap-y-2 px-5 py-3.5 items-center border-b border-line last:border-0"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="grid place-items-center w-9 h-9 shrink-0 rounded-full bg-surface-sunken ring-1 ring-line text-xs font-semibold text-content-secondary">
+                  {initials(u.name)}
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <div className="text-sm font-medium flex items-center gap-2">
+                    <span className="truncate">{u.name}</span>
+                    {u.id === me?.id && (
+                      <span className="text-[0.6875rem] font-medium text-accent-content bg-accent-soft rounded px-1.5 py-px">
+                        You
+                      </span>
+                    )}
+                  </div>
+                  <div className="t-caption truncate mt-0.5">{u.email}</div>
+                </div>
+              </div>
+              <div>
+                {isSuper && u.id !== me?.id ? (
+                  <select
+                    value={u.role}
+                    onChange={(e) => changeRole(u.id, e.target.value as Role)}
+                    aria-label={`Role for ${u.name}`}
+                    className="input !h-8 !text-[0.8125rem]"
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_NAME[r]}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-[0.8125rem] text-content-secondary">
+                    <span className={`w-1.5 h-1.5 rounded-full ${ROLE_DOT[u.role]}`} />
+                    {ROLE_NAME[u.role]}
                   </span>
                 )}
               </div>
-              <div className="t-caption mt-0.5 truncate">
-                {u.email} · joined {new Date(u.createdAt).toLocaleDateString()}
+              <div className="hidden sm:block t-caption">{formatDate(u.createdAt)}</div>
+              <div className="hidden sm:flex justify-end">
+                {isSuper && u.id !== me?.id && (
+                  <button
+                    onClick={() => remove(u.id)}
+                    className="btn btn-danger btn-icon btn-sm"
+                    title={`Delete ${u.name}`}
+                    aria-label={`Delete ${u.name}`}
+                  >
+                    <Trash2 />
+                  </button>
+                )}
               </div>
             </div>
-            {isSuper ? (
-              <select
-                value={u.role}
-                onChange={(e) => changeRole(u.id, e.target.value as Role)}
-                className={`text-xs font-mono px-2.5 py-1 rounded-lg border ${ROLE_COLOR[u.role]}`}
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
+          ))}
+          {!loading && users.length === 0 && (
+            <p className="px-5 py-12 t-secondary text-center">No users yet.</p>
+          )}
+        </section>
+
+        <aside className="card p-4">
+          <h2 className="text-[0.8125rem] font-semibold mb-3">Roles</h2>
+          <dl className="space-y-3.5">
+            {ROLES.map((r) => (
+              <div key={r}>
+                <dt className="flex items-center gap-2 text-[0.8125rem] font-medium">
+                  <span className={`w-1.5 h-1.5 rounded-full ${ROLE_DOT[r]}`} />
+                  {ROLE_NAME[r]}
+                </dt>
+                <dd className="t-caption mt-0.5 pl-3.5">{ROLE_DESCRIPTIONS[r]}</dd>
+              </div>
+            ))}
+          </dl>
+        </aside>
+      </div>
+
+      <Modal
+        open={isSuper && showCreate}
+        onClose={() => setShowCreate(false)}
+        labelledBy="create-user-title"
+        dismissOnScrim={false}
+      >
+        <form
+          onSubmit={createUser}
+          autoComplete="off"
+          data-form-type="other"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bwignore="true"
+        >
+          {/* Decoys to keep aggressive password managers off the real fields. */}
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="hidden"
+          />
+          <input
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="hidden"
+          />
+          <h2 id="create-user-title" className="t-heading">
+            Add a user
+          </h2>
+          <p className="t-caption mt-1">They can sign in right away with the password you set.</p>
+
+          <div className="mt-5 space-y-4">
+            <label className="block">
+              <span className="field-label">Name</span>
+              <input
+                data-autofocus
+                className="input"
+                name="cz-create-name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+              />
+            </label>
+            <label className="block">
+              <span className="field-label">Email</span>
+              <input
+                className="input"
+                type="text"
+                inputMode="email"
+                name="cz-create-account-handle"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="field-label">Temporary password</span>
+                <input
+                  className="input font-mono"
+                  type="text"
+                  name="cz-create-secret-token"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  minLength={8}
+                  maxLength={72}
+                  required
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  style={{ WebkitTextSecurity: 'disc' } as React.CSSProperties}
+                />
+              </label>
+              <label className="block">
+                <span className="field-label">Role</span>
+                <select
+                  className="input"
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
+                  required
+                >
+                  <option value="" disabled>
+                    Choose…
                   </option>
-                ))}
-              </select>
-            ) : (
-              <span
-                className={`pill border ${ROLE_COLOR[u.role]}`}
-                style={{ textTransform: 'none' }}
-              >
-                {u.role.replace('_', ' ')}
-              </span>
-            )}
-            {isSuper && u.id !== me?.id && (
-              <button onClick={() => remove(u.id)} className="btn btn-danger text-xs">
-                Delete
-              </button>
-            )}
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_NAME[r]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {form.role && <p className="t-caption -mt-1">{ROLE_DESCRIPTIONS[form.role]}</p>}
           </div>
-        ))}
-        {users.length === 0 && (
-          <p className="px-5 py-12 t-body text-content-secondary text-center">No users yet.</p>
-        )}
-      </section>
+
+          {error && <p className="note note-danger mt-4">{error}</p>}
+
+          <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button disabled={busy || !form.role} className="btn btn-primary">
+              {busy ? 'Creating…' : 'Create account'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -14,9 +14,18 @@ export function initials(name: string | null | undefined): string {
     .toUpperCase();
 }
 
-// UI name for each status, in one table so the tiles and the filter can't disagree.
+// UI name for each status group, in one table so tiles and filters can't disagree.
 export const STATUS_LABEL: Record<PostStatus, string> = {
   DRAFT: 'Drafts',
+  PENDING_REVIEW: 'In review',
+  SCHEDULED: 'Scheduled',
+  PUBLISHED: 'Published',
+  ARCHIVED: 'Archived',
+};
+
+// Singular, for a pill on one post.
+export const STATUS_NAME: Record<PostStatus, string> = {
+  DRAFT: 'Draft',
   PENDING_REVIEW: 'In review',
   SCHEDULED: 'Scheduled',
   PUBLISHED: 'Published',
@@ -30,3 +39,32 @@ export const STATUS_PILL: Record<PostStatus, string> = {
   PUBLISHED: 'pill-published',
   ARCHIVED: 'pill-archived',
 };
+
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+const STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['second', 60],
+  ['minute', 60],
+  ['hour', 24],
+  ['day', 7],
+  ['week', 4.35],
+  ['month', 12],
+  ['year', Infinity],
+];
+
+/** "3 hours ago", "in 2 days". */
+export function relativeTime(iso: string | Date): string {
+  let v = (new Date(iso).getTime() - Date.now()) / 1000;
+  for (const [unit, size] of STEPS) {
+    if (Math.abs(v) < size) return rtf.format(Math.round(v), unit);
+    v /= size;
+  }
+  return '';
+}
+
+export function formatDate(iso: string | Date): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}

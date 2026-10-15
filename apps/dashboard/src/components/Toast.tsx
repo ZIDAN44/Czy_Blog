@@ -16,6 +16,7 @@ import {
   project,
 } from '@/lib/motion';
 import { useSpring } from '@/lib/useMotion';
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 
 // Non-blocking feedback that only needs to be seen (status/success/warning/error);
 // dialogs stay reserved for actual decisions.
@@ -41,11 +42,11 @@ export function useToast() {
   return ctx;
 }
 
-const TONE: Record<ToastTone, { accent: string; glyph: string; label: string }> = {
-  status: { accent: 'bg-inverse text-on-inverse', glyph: '•', label: 'Status' },
-  success: { accent: 'bg-success-soft text-success-content', glyph: '✓', label: 'Success' },
-  warning: { accent: 'bg-warning-soft text-warning-content', glyph: '!', label: 'Warning' },
-  error: { accent: 'bg-danger-soft text-danger-content', glyph: '!', label: 'Error' },
+const TONE: Record<ToastTone, { color: string; icon: LucideIcon }> = {
+  status: { color: 'text-content-secondary', icon: Info },
+  success: { color: 'text-success', icon: CircleCheck },
+  warning: { color: 'text-warning', icon: TriangleAlert },
+  error: { color: 'text-danger', icon: CircleAlert },
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -183,25 +184,20 @@ function ToastItem({ toast, onDismiss }: { toast: ToastRecord; onDismiss: () => 
       onMouseLeave={startTimer}
       onFocus={hold}
       onBlur={startTimer}
-      className="surface pointer-events-auto w-full max-w-sm p-3.5 pr-3 flex items-start gap-3 will-move select-none cursor-grab active:cursor-grabbing"
+      className="surface pointer-events-auto w-full max-w-sm p-3.5 pr-2.5 flex items-start gap-3 !rounded-xl will-move select-none cursor-grab active:cursor-grabbing"
       style={{ touchAction: 'pan-y' }}
     >
-      <span
-        className={`grid place-items-center w-6 h-6 rounded-full text-xs font-bold flex-shrink-0 mt-0.5 ${tone.accent}`}
-        aria-hidden
-      >
-        {tone.glyph}
-      </span>
+      <tone.icon className={`w-[18px] h-[18px] flex-shrink-0 mt-px ${tone.color}`} aria-hidden />
       <div className="flex-1 min-w-0">
         <p className="t-subheading text-content">{toast.title}</p>
-        {toast.message && <p className="t-caption mt-0.5 vibrant-secondary">{toast.message}</p>}
+        {toast.message && <p className="t-caption mt-0.5">{toast.message}</p>}
       </div>
       <button
         onClick={() => enter.to(0, { ...SPRING_SMOOTH, response: 0.28, onRest: onDismiss })}
-        className="btn btn-ghost px-2 py-1 text-xs -mt-0.5"
+        className="btn btn-ghost btn-icon btn-sm -mt-1 -mr-0.5"
         aria-label="Dismiss notification"
       >
-        ✕
+        <X />
       </button>
     </div>
   );

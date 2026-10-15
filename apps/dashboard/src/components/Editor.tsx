@@ -9,6 +9,26 @@ import { common, createLowlight } from 'lowlight';
 import { DOMParser as PMDOMParser, type Schema } from '@tiptap/pm/model';
 import { marked } from 'marked';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Bold,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  ImagePlus,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
+  Loader2,
+  Minus,
+  Quote,
+  Redo2,
+  SquareCode,
+  Strikethrough,
+  Undo2,
+  type LucideIcon,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Modal } from '@/components/Overlay';
 import { useToast } from '@/components/Toast';
@@ -33,23 +53,6 @@ function htmlToSlice(html: string, schema: Schema) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   return PMDOMParser.fromSchema(schema).parseSlice(doc.body);
 }
-
-const LinkIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    aria-hidden
-  >
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
 
 interface LinkModalProps {
   open: boolean;
@@ -91,20 +94,20 @@ function LinkModal({ open, initialUrl, hasExisting, onClose, onSubmit, onRemove 
       dismissOnScrim={false}
     >
       <form onSubmit={submit}>
-        <div className="flex items-start gap-4">
-          <div className="grid place-items-center flex-shrink-0 w-10 h-10 rounded-full bg-accent-soft text-accent-content">
-            <LinkIcon className="w-5 h-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 id="link-modal-title" className="t-heading text-content">
+        <div className="flex items-center gap-3">
+          <span className="grid place-items-center w-9 h-9 rounded-lg bg-surface-sunken ring-1 ring-line text-content-secondary">
+            <Link2 className="w-4 h-4" />
+          </span>
+          <div>
+            <h2 id="link-modal-title" className="t-heading">
               {hasExisting ? 'Edit link' : 'Insert link'}
             </h2>
-            <p className="t-secondary mt-1">Point the selected text somewhere.</p>
+            <p className="t-caption">Point the selected text somewhere.</p>
           </div>
         </div>
 
         <label className="block mt-5">
-          <span className="t-caption font-medium text-content-secondary">URL</span>
+          <span className="field-label">URL</span>
           <input
             ref={inputRef}
             data-autofocus
@@ -112,7 +115,7 @@ function LinkModal({ open, initialUrl, hasExisting, onClose, onSubmit, onRemove 
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com"
             type="url"
-            className="input mt-1 font-mono text-sm"
+            className="input font-mono text-[0.8125rem]"
           />
         </label>
 
@@ -132,6 +135,15 @@ function LinkModal({ open, initialUrl, hasExisting, onClose, onSubmit, onRemove 
       </form>
     </Modal>
   );
+}
+
+interface Tool {
+  key: string;
+  title: string;
+  icon: LucideIcon;
+  active?: boolean;
+  disabled?: boolean;
+  run: () => void;
 }
 
 function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => void }) {
@@ -163,175 +175,162 @@ function Toolbar({ editor, onOpenLink }: { editor: Editor; onOpenLink: () => voi
     input.click();
   }, [editor, toast]);
 
-  const Divider = () => <span className="w-px bg-line-strong mx-1 self-stretch my-1" aria-hidden />;
+  const chain = () => editor.chain().focus();
 
-  // Grouped by effect: marks, structure, inserts, history — proximity, not labels.
-  const marks = [
-    {
-      key: 'bold',
-      title: 'Bold',
-      body: <strong>B</strong>,
-      run: () => editor.chain().focus().toggleBold().run(),
-    },
-    {
-      key: 'italic',
-      title: 'Italic',
-      body: <i>I</i>,
-      run: () => editor.chain().focus().toggleItalic().run(),
-    },
-    {
-      key: 'strike',
-      title: 'Strikethrough',
-      body: <s>S</s>,
-      run: () => editor.chain().focus().toggleStrike().run(),
-    },
-  ];
-
-  const blocks = [
-    {
-      key: 'heading1',
-      title: 'Heading 1',
-      body: 'H1',
-      active: editor.isActive('heading', { level: 1 }),
-      run: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
-    },
-    {
-      key: 'heading2',
-      title: 'Heading 2',
-      body: 'H2',
-      active: editor.isActive('heading', { level: 2 }),
-      run: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-    },
-    {
-      key: 'heading3',
-      title: 'Heading 3',
-      body: 'H3',
-      active: editor.isActive('heading', { level: 3 }),
-      run: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
-    },
-    {
-      key: 'bulletList',
-      title: 'Bullet list',
-      body: '•',
-      active: editor.isActive('bulletList'),
-      run: () => editor.chain().focus().toggleBulletList().run(),
-    },
-    {
-      key: 'orderedList',
-      title: 'Numbered list',
-      body: '1.',
-      active: editor.isActive('orderedList'),
-      run: () => editor.chain().focus().toggleOrderedList().run(),
-    },
-    {
-      key: 'blockquote',
-      title: 'Blockquote',
-      body: '❝',
-      active: editor.isActive('blockquote'),
-      run: () => editor.chain().focus().toggleBlockquote().run(),
-    },
-    {
-      key: 'codeBlock',
-      title: 'Code block',
-      body: '</>',
-      active: editor.isActive('codeBlock'),
-      run: () => editor.chain().focus().toggleCodeBlock().run(),
-    },
+  // Grouped by effect: marks, structure, inserts, history.
+  const groups: Tool[][] = [
+    [
+      {
+        key: 'bold',
+        title: 'Bold (Ctrl+B)',
+        icon: Bold,
+        active: editor.isActive('bold'),
+        run: () => chain().toggleBold().run(),
+      },
+      {
+        key: 'italic',
+        title: 'Italic (Ctrl+I)',
+        icon: Italic,
+        active: editor.isActive('italic'),
+        run: () => chain().toggleItalic().run(),
+      },
+      {
+        key: 'strike',
+        title: 'Strikethrough',
+        icon: Strikethrough,
+        active: editor.isActive('strike'),
+        run: () => chain().toggleStrike().run(),
+      },
+      {
+        key: 'code',
+        title: 'Inline code',
+        icon: Code,
+        active: editor.isActive('code'),
+        run: () => chain().toggleCode().run(),
+      },
+    ],
+    [
+      {
+        key: 'h1',
+        title: 'Heading 1',
+        icon: Heading1,
+        active: editor.isActive('heading', { level: 1 }),
+        run: () => chain().toggleHeading({ level: 1 }).run(),
+      },
+      {
+        key: 'h2',
+        title: 'Heading 2',
+        icon: Heading2,
+        active: editor.isActive('heading', { level: 2 }),
+        run: () => chain().toggleHeading({ level: 2 }).run(),
+      },
+      {
+        key: 'h3',
+        title: 'Heading 3',
+        icon: Heading3,
+        active: editor.isActive('heading', { level: 3 }),
+        run: () => chain().toggleHeading({ level: 3 }).run(),
+      },
+      {
+        key: 'ul',
+        title: 'Bullet list',
+        icon: List,
+        active: editor.isActive('bulletList'),
+        run: () => chain().toggleBulletList().run(),
+      },
+      {
+        key: 'ol',
+        title: 'Numbered list',
+        icon: ListOrdered,
+        active: editor.isActive('orderedList'),
+        run: () => chain().toggleOrderedList().run(),
+      },
+      {
+        key: 'quote',
+        title: 'Quote',
+        icon: Quote,
+        active: editor.isActive('blockquote'),
+        run: () => chain().toggleBlockquote().run(),
+      },
+      {
+        key: 'codeBlock',
+        title: 'Code block',
+        icon: SquareCode,
+        active: editor.isActive('codeBlock'),
+        run: () => chain().toggleCodeBlock().run(),
+      },
+    ],
+    [
+      {
+        key: 'link',
+        title: 'Link (Ctrl+K)',
+        icon: Link2,
+        active: editor.isActive('link'),
+        run: onOpenLink,
+      },
+      {
+        key: 'image',
+        title: uploading ? 'Uploading image…' : 'Insert image',
+        icon: uploading ? Loader2 : ImagePlus,
+        disabled: uploading,
+        run: uploadImage,
+      },
+      { key: 'hr', title: 'Divider', icon: Minus, run: () => chain().setHorizontalRule().run() },
+    ],
+    [
+      {
+        key: 'undo',
+        title: 'Undo',
+        icon: Undo2,
+        disabled: !editor.can().undo(),
+        run: () => chain().undo().run(),
+      },
+      {
+        key: 'redo',
+        title: 'Redo',
+        icon: Redo2,
+        disabled: !editor.can().redo(),
+        run: () => chain().redo().run(),
+      },
+    ],
   ];
 
   return (
-    <div className="material-thin sticky top-14 z-10 flex flex-wrap items-center gap-1 p-2 rounded-t-xl border-b border-line">
-      {marks.map((m) => (
-        <ToolButton key={m.key} title={m.title} active={editor.isActive(m.key)} onClick={m.run}>
-          {m.body}
-        </ToolButton>
-      ))}
-      <Divider />
-      {blocks.map((b) => (
-        <ToolButton key={b.key} title={b.title} active={b.active} onClick={b.run}>
-          {b.body}
-        </ToolButton>
-      ))}
-      <Divider />
-      <ToolButton title="Link" active={editor.isActive('link')} onClick={onOpenLink}>
-        <LinkIcon />
-      </ToolButton>
-      <ToolButton
-        title={uploading ? 'Uploading image…' : 'Insert image'}
-        active={false}
-        disabled={uploading}
-        onClick={uploadImage}
-      >
-        {uploading ? (
-          <span className="skeleton block w-4 h-4 rounded" aria-hidden />
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4"
-            aria-hidden
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="9" cy="9" r="2" />
-            <path d="m21 15-5-5L5 21" />
-          </svg>
-        )}
-      </ToolButton>
-      <Divider />
-      <ToolButton
-        title="Undo"
-        active={false}
-        disabled={!editor.can().undo()}
-        onClick={() => editor.chain().focus().undo().run()}
-      >
-        ↶
-      </ToolButton>
-      <ToolButton
-        title="Redo"
-        active={false}
-        disabled={!editor.can().redo()}
-        onClick={() => editor.chain().focus().redo().run()}
-      >
-        ↷
-      </ToolButton>
-    </div>
-  );
-}
-
-function ToolButton({
-  title,
-  active,
-  onClick,
-  disabled,
-  children,
-}: {
-  title: string;
-  active: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      aria-pressed={active}
-      disabled={disabled}
-      onClick={onClick}
-      className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg text-sm font-medium disabled:opacity-35 ${
-        active
-          ? 'bg-inverse text-on-inverse'
-          : 'text-content-secondary hover:bg-surface hover:text-content hover:shadow-sm'
-      }`}
+    <div
+      role="toolbar"
+      aria-label="Formatting"
+      className="chrome sticky top-14 lg:top-0 z-10 flex items-center gap-0.5 px-3 sm:px-6 py-1.5 border-y !border-line overflow-x-auto"
     >
-      {children}
-    </button>
+      {groups.map((g, i) => (
+        <div key={i} className="flex items-center gap-0.5">
+          {i > 0 && <span className="w-px h-5 bg-line-strong mx-1.5" aria-hidden />}
+          {g.map((t) => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                title={t.title}
+                aria-label={t.title}
+                aria-pressed={t.active ?? false}
+                disabled={t.disabled}
+                onClick={t.run}
+                className={`grid place-items-center w-8 h-8 shrink-0 rounded-md disabled:opacity-30 ${
+                  t.active
+                    ? 'bg-fill-active text-content'
+                    : 'text-content-secondary hover:bg-fill-hover hover:text-content'
+                }`}
+              >
+                <Icon
+                  className={`w-4 h-4 ${t.key === 'image' && uploading ? 'animate-spin' : ''}`}
+                  strokeWidth={t.active ? 2.4 : 2}
+                />
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -353,6 +352,14 @@ export default function BlockEditor({ initialContent, onChange }: Props) {
       Placeholder.configure({ placeholder: 'Write something worth reading…' }),
     ],
     editorProps: {
+      handleKeyDown(_view, event) {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          setLinkOpen(true);
+          return true;
+        }
+        return false;
+      },
       handlePaste(view, event) {
         const html = event.clipboardData?.getData('text/html');
         if (html && html.trim()) return false;
@@ -377,20 +384,26 @@ export default function BlockEditor({ initialContent, onChange }: Props) {
 
   if (!editor)
     return (
-      <div className="rounded-xl border border-line bg-surface/60 p-5 space-y-3">
-        <div className="skeleton h-8 w-full" />
-        <div className="skeleton h-4 w-3/4" />
-        <div className="skeleton h-4 w-5/6" />
-        <div className="skeleton h-4 w-2/3" />
+      <div className="px-6 py-8 space-y-3">
+        <div className="skeleton h-5 w-full" />
+        <div className="skeleton h-5 w-11/12" />
+        <div className="skeleton h-5 w-4/5" />
+        <div className="skeleton h-5 w-2/3" />
       </div>
     );
 
   const existingHref: string | undefined = editor.getAttributes('link').href;
 
   return (
-    <div className="bg-surface/70 border border-line rounded-xl">
+    <div>
       <Toolbar editor={editor} onOpenLink={() => setLinkOpen(true)} />
-      <div className="p-5">
+      <div
+        className="px-4 sm:px-6 py-8 min-h-[28rem] cursor-text"
+        onClick={(e) => {
+          // Clicking the empty area below the text still focuses the editor.
+          if (e.target === e.currentTarget) editor.chain().focus('end').run();
+        }}
+      >
         <EditorContent editor={editor} />
       </div>
       <LinkModal

@@ -1,9 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Check, Loader2 } from 'lucide-react';
 import AuthShell from '@/components/AuthShell';
 import { bootstrapAccount, needsBootstrap, setSession } from '@/lib/api';
 import { errMsg } from '@/lib/utils';
+
+const STEPS = [
+  'This account becomes the super admin.',
+  'Invite editors, authors, and contributors.',
+  'Write, schedule, and publish from one place.',
+];
 
 export default function SignupPage() {
   const router = useRouter();
@@ -39,77 +46,88 @@ export default function SignupPage() {
     }
   }
 
-  if (!allowed) return null;
+  if (!allowed)
+    return error ? (
+      <main className="min-h-screen grid place-items-center p-6">
+        <p className="note note-danger">{error}</p>
+      </main>
+    ) : null;
 
   return (
     <AuthShell
-      gradient={
-        'radial-gradient(600px 400px at 80% 20%, rgba(168,85,247,0.4), transparent 60%),' +
-        'radial-gradient(500px 400px at 20% 80%, rgba(99,102,241,0.4), transparent 60%)'
-      }
       panel={
-        <div className="relative space-y-4 max-w-md">
-          <span className="inline-block text-[10px] uppercase tracking-widest bg-white/10 border border-white/15 rounded-full px-2.5 py-1 font-medium">
+        <div className="max-w-md">
+          <span className="inline-flex items-center h-6 px-2.5 rounded-full text-xs font-medium bg-white/10 ring-1 ring-white/15">
             First-run setup
           </span>
-          <h2 className="t-display leading-tight">Set up your blog</h2>
-          <p className="text-brand-muted t-body">
-            The first account you create becomes the super admin. From there you can invite editors,
-            authors, and contributors, and manage everything from one place.
-          </p>
+          <h2 className="font-serif text-[2.75rem] leading-[1.08] tracking-[-0.025em] mt-5">
+            Set up your blog.
+          </h2>
+          <ul className="mt-8 space-y-3">
+            {STEPS.map((s) => (
+              <li key={s} className="flex items-start gap-3 text-[0.9375rem] text-brand-muted">
+                <span className="grid place-items-center w-5 h-5 mt-0.5 rounded-full bg-white/10 text-on-brand shrink-0">
+                  <Check className="w-3 h-3" strokeWidth={3} />
+                </span>
+                {s}
+              </li>
+            ))}
+          </ul>
         </div>
       }
     >
-      <form onSubmit={submit} className="w-full max-w-sm space-y-5 animate-slideUp">
-        <div>
-          <h1 className="t-title">Create your admin account</h1>
-          <p className="t-secondary mt-1">
-            You're the first user, so this account gets full access.
-          </p>
+      <form onSubmit={submit} className="w-full max-w-[22rem] animate-slideUp">
+        <h1 className="t-title">Create your admin account</h1>
+        <p className="t-secondary mt-1.5">
+          You&apos;re the first user, so this account gets full access.
+        </p>
+
+        <div className="mt-8 space-y-4">
+          <label className="block">
+            <span className="field-label">Your name</span>
+            <input
+              className="input h-10"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              autoFocus
+              placeholder="Ada Lovelace"
+            />
+          </label>
+          <label className="block">
+            <span className="field-label">Email</span>
+            <input
+              className="input h-10"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+            />
+          </label>
+          <label className="block">
+            <span className="field-label">Password</span>
+            <input
+              className="input h-10"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              required
+              minLength={8}
+              maxLength={72}
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+            />
+          </label>
         </div>
-        <label className="block">
-          <span className="t-caption font-medium text-content-secondary">Your name</span>
-          <input
-            className="input mt-1"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="Ada Lovelace"
-          />
-        </label>
-        <label className="block">
-          <span className="t-caption font-medium text-content-secondary">Email</span>
-          <input
-            className="input mt-1"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="you@example.com"
-          />
-        </label>
-        <label className="block">
-          <span className="t-caption font-medium text-content-secondary">Password</span>
-          <input
-            className="input mt-1"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            required
-            minLength={8}
-            maxLength={72}
-            autoComplete="new-password"
-            placeholder="At least 8 characters"
-          />
-          <span className="t-caption mt-1 block">Minimum 8 characters.</span>
-        </label>
         {error && (
-          <p role="alert" className="note note-danger t-body animate-slideUp">
+          <p role="alert" className="note note-danger mt-4 animate-slideUp">
             {error}
           </p>
         )}
-        <button disabled={busy} className="btn btn-primary w-full py-2.5">
+        <button disabled={busy} className="btn btn-primary btn-lg w-full mt-6">
+          {busy && <Loader2 className="animate-spin" />}
           {busy ? 'Creating account…' : 'Create admin account'}
         </button>
       </form>
