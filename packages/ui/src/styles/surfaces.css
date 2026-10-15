@@ -1,32 +1,34 @@
 /* Chrome, cards, modal surfaces and scrims. */
 
-/* Sticky chrome: content scrolls under it; the edge appears once scrolled. */
-.chrome {
-  background: var(--material-chrome);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border-bottom: 1px solid transparent;
-  transition: border-color 200ms var(--ease-out-soft);
-}
-.chrome[data-scrolled='true'] {
-  border-bottom-color: var(--color-line);
-}
+@layer components {
+  /* Sticky chrome: content scrolls under it; the edge appears once scrolled. */
+  .chrome {
+    background: var(--material-chrome);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border-bottom: 1px solid transparent;
+    transition: border-color 200ms var(--ease-out-soft);
+  }
+  .chrome[data-scrolled='true'] {
+    border-bottom-color: var(--color-line);
+  }
 
-.card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-}
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
 
-.surface {
-  background: var(--material-thick);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-surface);
-  box-shadow: var(--shadow-modal);
-}
+  .surface {
+    background: var(--material-thick);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-surface);
+    box-shadow: var(--shadow-modal);
+  }
 
-.scrim {
-  background: var(--scrim);
-  backdrop-filter: blur(2px);
+  .scrim {
+    background: var(--scrim);
+    backdrop-filter: blur(2px);
+  }
 }

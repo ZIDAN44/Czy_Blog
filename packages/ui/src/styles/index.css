@@ -1,6 +1,10 @@
 /* Shared stylesheet for web and dashboard. Import after 'tailwindcss'.
    Every colour is semantic; dark.css redefines the same names. */
 
+/* Layering: base rules and component classes sit in Tailwind's base/components
+   layers, so utilities (e.g. `max-lg:hidden` on a .btn) can override them.
+   Tokens, dark and a11y stay unlayered on purpose: they must always win. */
+
 /* Let Tailwind see the class names used by the shared components. */
 @source '../';
 

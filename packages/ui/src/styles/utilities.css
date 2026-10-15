@@ -1,26 +1,28 @@
 /* Small helpers: hover-revealed row actions, text links. */
 
-.row-actions {
-  opacity: 0;
-  transition: opacity 120ms var(--ease-out-soft);
-}
-.group:hover .row-actions,
-.group:focus-within .row-actions {
-  opacity: 1;
-}
-@media (hover: none) {
+@layer components {
   .row-actions {
+    opacity: 0;
+    transition: opacity 120ms var(--ease-out-soft);
+  }
+  .group:hover .row-actions,
+  .group:focus-within .row-actions {
     opacity: 1;
   }
-}
+  @media (hover: none) {
+    .row-actions {
+      opacity: 1;
+    }
+  }
 
-.link {
-  color: var(--color-content);
-  text-decoration: underline;
-  text-decoration-color: var(--color-line-strong);
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1px;
-}
-.link:hover {
-  text-decoration-color: currentColor;
+  .link {
+    color: var(--color-content);
+    text-decoration: underline;
+    text-decoration-color: var(--color-line-strong);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .link:hover {
+    text-decoration-color: currentColor;
+  }
 }
