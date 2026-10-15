@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Loader2 } from 'lucide-react';
-import AuthShell from '@/components/AuthShell';
+import AuthField from '@/components/auth/AuthField';
+import AuthShell from '@/components/auth/AuthShell';
 import { login, needsBootstrap, setSession } from '@/lib/api';
 import { errMsg } from '@/lib/utils';
 
@@ -62,31 +63,23 @@ export default function LoginPage() {
         <p className="t-secondary mt-1.5">Sign in to your dashboard.</p>
 
         <div className="mt-8 space-y-4">
-          <label className="block">
-            <span className="field-label">Email</span>
-            <input
-              className="input h-10"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              required
-              autoFocus
-              autoComplete="email"
-              placeholder="you@example.com"
-            />
-          </label>
-          <label className="block">
-            <span className="field-label">Password</span>
-            <input
-              className="input h-10"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              required
-              autoComplete="current-password"
-              placeholder="••••••••"
-            />
-          </label>
+          <AuthField
+            label="Email"
+            value={email}
+            onChange={setEmail}
+            type="email"
+            autoFocus
+            autoComplete="email"
+            placeholder="you@example.com"
+          />
+          <AuthField
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+          />
         </div>
 
         {error && (

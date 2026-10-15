@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import PostForm from '@/components/PostForm';
+import PostForm from '@/components/post-editor/PostForm';
 import { api, type PostStatus } from '@/lib/api';
 import { errMsg } from '@/lib/utils';
 

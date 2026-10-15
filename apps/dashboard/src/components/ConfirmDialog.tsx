@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Modal, Sheet } from '@/components/Overlay';
+import { Modal, Sheet } from '@/components/overlay';
 import { useIsCompact } from '@czyblog/ui/hooks';
 import { CircleCheck, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
 

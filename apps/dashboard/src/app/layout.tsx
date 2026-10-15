@@ -2,7 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
-import { ToastProvider } from '@/components/Toast';
+import { ToastProvider } from '@/components/toast';
 import { fontVariables } from '@czyblog/ui/fonts';
 import { THEME_BOOTSTRAP } from '@czyblog/ui/theme';
 

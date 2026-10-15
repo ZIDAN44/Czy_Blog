@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import Nav from '@/components/Nav';
+import Nav from '@/components/nav/Nav';
 import { api, currentUser, setSession, type SessionUser } from '@/lib/api';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
