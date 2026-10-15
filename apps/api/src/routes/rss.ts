@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { prisma } from '../db.js';
 import { config } from '../config.js';
 import { publishedPostWhere } from '../lib/queries.js';
+import { postPublicUrl } from '../lib/urls.js';
 
 // Chars XML 1.0 forbids: unescapable, so one stray byte breaks the whole feed. Strip before escaping.
 // eslint-disable-next-line no-control-regex
@@ -37,7 +38,7 @@ export async function rssRoutes(app: FastifyInstance) {
         (p) => `
       <item>
         <title>${esc(p.title)}</title>
-        <link>${esc(`${config.publicSiteUrl}/${p.slug}`)}</link>
+        <link>${esc(postPublicUrl(p.slug))}</link>
         <guid isPermaLink="false">${esc(p.id)}</guid>
         <pubDate>${p.publishedAt?.toUTCString() ?? ''}</pubDate>
         <author>${esc(p.author.name)}</author>

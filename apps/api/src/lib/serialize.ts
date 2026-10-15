@@ -1,5 +1,5 @@
 import type { Post, User, Category, Tag, PostTag } from '../db.js';
-import { config } from '../config.js';
+import { postPublicUrl } from './urls.js';
 
 type PostWithRels = Post & {
   author: Pick<User, 'id' | 'name' | 'avatarUrl' | 'bio'>;
@@ -18,7 +18,7 @@ export function serializePost(p: PostWithRels) {
     status: p.status,
     published_date: p.publishedAt,
     scheduled_for: p.scheduledFor,
-    canonical_link: `${config.publicSiteUrl}/${p.slug}`,
+    canonical_link: postPublicUrl(p.slug),
     view_count: p.viewCount,
     author: {
       id: p.author.id,

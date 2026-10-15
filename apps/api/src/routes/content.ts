@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma, Prisma } from '../db.js';
-import { config } from '../config.js';
+import { postPublicUrl } from '../lib/urls.js';
 import { pageArgs, paginated, paginationSchema, publishedPostWhere } from '../lib/queries.js';
 import { slugParam } from '../lib/schemas.js';
 
@@ -19,7 +19,7 @@ type ContentPost = Prisma.PostGetPayload<{ select: typeof postSelect }>;
 function serializeContentPost(p: ContentPost) {
   return {
     title: p.title,
-    link: `${config.publicSiteUrl}/posts/${p.slug}`,
+    link: postPublicUrl(p.slug),
     published_date: p.publishedAt,
     author: p.author.name,
     description: p.excerpt,

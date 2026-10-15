@@ -12,7 +12,7 @@ Published, non-deleted posts only. The shape is flat, meant for listings:
   "data": [
     {
       "title": "Post title",
-      "link": "https://blog.example.com/posts/post-title",
+      "link": "https://blog.example.com/post-title",
       "published_date": "2026-03-04T10:00:00.000Z",
       "author": "Name",
       "description": "The excerpt.",
@@ -23,8 +23,8 @@ Published, non-deleted posts only. The shape is flat, meant for listings:
 }
 ```
 
-No post body in that response. `link` is built from
-[`PUBLIC_SITE_URL`](environment.md#public_site_url).
+No post body in that response. `link` is the post on the reader:
+[`PUBLIC_SITE_URL`](environment.md#public_site_url) + `/<slug>`, the same URL as RSS and `canonical_link`.
 
 | You want                           | Use                            |
 | ---------------------------------- | ------------------------------ |
