@@ -2,6 +2,8 @@ export const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 const BROWSER_API_BASE = '/api-proxy';
 
+let signingOut = false;
+
 export type Role = 'SUPER_ADMIN' | 'EDITOR' | 'AUTHOR' | 'CONTRIBUTOR';
 export type PostStatus = 'DRAFT' | 'PENDING_REVIEW' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
 
@@ -34,6 +36,18 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
     headers.set('Content-Type', 'application/json');
   }
   const res = await fetch(`${BROWSER_API_BASE}${path}`, { ...opts, headers });
+  // Through the proxy, 401 only ever means a dead session (password changed elsewhere,
+  // user removed). Every later call would fail too, so sign out once, cleanly.
+  if (res.status === 401 && typeof window !== 'undefined') {
+    if (!signingOut) {
+      signingOut = true;
+      clearSession();
+      await logout().catch(() => {});
+      window.location.replace('/login');
+    }
+    // The page is being replaced; never settle, so no error UI flashes first.
+    return new Promise<T>(() => {});
+  }
   if (!res.ok) {
     let detail: { error?: string } | undefined;
     try {

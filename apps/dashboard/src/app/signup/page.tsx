@@ -38,10 +38,10 @@ export default function SignupPage() {
     setError(null);
     try {
       setSession(await bootstrapAccount({ email, name, password }));
-      router.replace('/dashboard');
+      // Full load so no pre-auth redirect cached by the client router is reused.
+      window.location.replace('/dashboard');
     } catch (e) {
       setError(errMsg(e, 'Sign-up failed'));
-    } finally {
       setBusy(false);
     }
   }

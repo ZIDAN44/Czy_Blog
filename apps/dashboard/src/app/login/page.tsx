@@ -32,10 +32,11 @@ export default function LoginPage() {
     setError(null);
     try {
       setSession(await login(email, password));
-      router.replace('/dashboard');
+      // Full load, not router.replace: the client router may still hold the
+      // middleware's "/dashboard → /login" redirect from when the session lapsed.
+      window.location.replace('/dashboard');
     } catch (e) {
       setError(errMsg(e, 'Sign-in failed'));
-    } finally {
       setBusy(false);
     }
   }

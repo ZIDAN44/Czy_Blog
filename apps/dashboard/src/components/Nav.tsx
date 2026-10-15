@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   ArrowUpRight,
@@ -41,7 +41,6 @@ export default function Nav() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
   const scrolled = useScrolled();
   const desktop = useMediaQuery('(min-width: 1024px)');
@@ -60,7 +59,8 @@ export default function Nav() {
     // Clear the server cookie first, then the cached profile.
     await logout();
     clearSession();
-    router.replace('/login');
+    // Full load drops the router cache, so no signed-in pages linger in memory.
+    window.location.replace('/login');
   }
 
   const canManageUsers = user && (user.role === 'SUPER_ADMIN' || user.role === 'EDITOR');
