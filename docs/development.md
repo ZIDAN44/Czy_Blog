@@ -70,10 +70,14 @@ Or use the console's first-run sign-up at `http://localhost:3001/signup`.
 | `npm run build` / `start`          | Build / run production output.  |
 | `npm run db:up` / `db:down`        | Start / stop Postgres.          |
 | `npm run db:migrate` / `db:deploy` | Migrations.                     |
-| `npm run lint` / `lint:fix`        | ESLint.                         |
+| `npm run lint` / `lint:fix`        | ESLint + size limits.           |
+| `npm run typecheck`                | tsc across all workspaces.      |
 | `npm run format` / `format:check`  | Prettier.                       |
 
 ## Layout
+
+File size limits and where new code goes: [code conventions](conventions.md).
+
 
 | Path                               | Contents                                    |
 | ---------------------------------- | ------------------------------------------- |
@@ -88,9 +92,10 @@ Or use the console's first-run sign-up at `http://localhost:3001/signup`.
 | `apps/web/src/app/`                | Public reader routes (`/`, `/[slug]`, RSS). |
 | `apps/dashboard/src/app/`          | Admin console routes + auth/proxy handlers. |
 | `apps/dashboard/src/middleware.ts` | Cookie gate for the console.                |
-| `apps/dashboard/src/components/`   | Editor, forms, nav.                         |
+| `apps/dashboard/src/components/`   | Feature folders (editor, nav, users, …).    |
+| `packages/ui/`                     | Shared design system: styles, theme, motion. |
 | `apps/dashboard/src/lib/api.ts`    | Client API helper, session.                 |
 
 Schema change: edit `schema.prisma`, run `npm run db:migrate`. The generated client lands
-in `apps/api/src/generated/prisma` (committed). Reset the dev DB: `npm run db:down`,
+in `apps/api/src/generated/prisma` (gitignored; `db:generate` recreates it). Reset the dev DB: `npm run db:down`,
 `docker compose down -v`, then `db:up` and `db:migrate`.

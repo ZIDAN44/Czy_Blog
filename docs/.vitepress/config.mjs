@@ -69,6 +69,7 @@ export default withMermaid(
           items: [
             { text: 'Production deployment', link: '/deployment' },
             { text: 'Development setup', link: '/development' },
+            { text: 'Code conventions', link: '/conventions' },
           ],
         },
       ],
