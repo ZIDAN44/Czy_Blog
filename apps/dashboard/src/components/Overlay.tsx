@@ -87,7 +87,10 @@ export function Modal({
   if (!host || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    // Click-through while closing, so the fading scrim never swallows the next click.
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${open ? '' : 'pointer-events-none'}`}
+    >
       <div
         ref={scrimRef}
         className="scrim absolute inset-0"
@@ -237,7 +240,9 @@ export function Sheet({
   if (!host || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div
+      className={`fixed inset-0 z-50 flex items-end justify-center ${open ? '' : 'pointer-events-none'}`}
+    >
       <div
         ref={scrimEl}
         className="scrim absolute inset-0"
@@ -330,7 +335,7 @@ export function Popover({
         panelRef.current = el;
       }}
       style={{ transformOrigin: origin }}
-      className={`surface absolute z-40 will-move ${className}`}
+      className={`surface absolute z-40 will-move ${open ? '' : 'pointer-events-none'} ${className}`}
     >
       {children}
     </div>
