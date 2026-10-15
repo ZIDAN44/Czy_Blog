@@ -1,29 +1,21 @@
 type Props = {
+  size?: number;
   className?: string;
   title?: string;
 };
 
-export default function Logo({ className, title = 'Czy Blog' }: Props) {
+// Monogram tile in the loaded serif, so it renders the same on every platform.
+export default function Logo({ size = 28, className = '', title = 'Czy Blog' }: Props) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 64 64"
-      fill="none"
+    <span
       role="img"
       aria-label={title}
-      className={className}
+      className={`inline-grid place-items-center shrink-0 rounded-[30%] bg-inverse text-on-inverse font-serif italic font-medium select-none ${className}`}
+      style={{ width: size, height: size, fontSize: size * 0.56, lineHeight: 1 }}
     >
-      <g fontFamily="'Playfair Display', Didot, 'Bodoni 72', Georgia, 'Times New Roman', serif">
-        <text x="-2" y="54" fontSize="68" fontWeight="400" fill="currentColor">
-          C
-        </text>
-        <text x="20" y="42" fontSize="40" fontWeight="700" fontStyle="italic" fill="#C9A24B">
-          Z
-        </text>
-        <text x="34" y="60" fontSize="40" fontStyle="italic" fill="currentColor">
-          y
-        </text>
-      </g>
-    </svg>
+      <span aria-hidden className="-translate-y-[4%] tracking-[-0.04em]">
+        C<span className="text-[#d9a94e]">z</span>
+      </span>
+    </span>
   );
 }

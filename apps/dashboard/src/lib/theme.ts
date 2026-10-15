@@ -7,8 +7,8 @@ export const THEME_KEY = 'czyblog:theme';
 
 /** Kept in sync with --color-canvas so the browser chrome matches the page. */
 const CANVAS: Record<'light' | 'dark', string> = {
-  light: '#fafafa',
-  dark: '#0b0d10',
+  light: '#fbfaf7',
+  dark: '#0f0e0d',
 };
 
 export function readTheme(): ThemePreference {
