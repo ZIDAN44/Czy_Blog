@@ -1,5 +1,5 @@
-// Renders TipTap JSON to React. Mirrors the editor extensions in Editor.tsx
-// so the published page matches what authors saw while writing.
+// Renders TipTap JSON to React. Mirrors the editor extensions in the dashboard's
+// components/editor/BlockEditor.tsx, so the page matches what authors saw while writing.
 import React from 'react';
 
 // URLs in authored content are untrusted, and React doesn't block javascript:
@@ -65,56 +65,49 @@ function applyMarks(text: string, marks: Node['marks'], key: string): React.Reac
 // overflow the stack without a ceiling.
 const MAX_RENDER_DEPTH = 30;
 
+type Renderer = (node: Node, key: string, children: React.ReactNode[]) => React.ReactNode;
+
+const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
+const wrap =
+  (tag: string): Renderer =>
+  (_node, key, children) =>
+    React.createElement(tag, { key }, children);
+
+// One renderer per node type in the editor schema; unknown types render their children.
+const RENDERERS: Record<string, Renderer> = {
+  paragraph: wrap('p'),
+  bulletList: wrap('ul'),
+  orderedList: wrap('ol'),
+  listItem: wrap('li'),
+  blockquote: wrap('blockquote'),
+  heading: (node, key, children) => {
+    const lvl = Math.min(Math.max(Number(node.attrs?.level ?? 2), 1), 6);
+    return React.createElement(`h${lvl}`, { key }, children);
+  },
+  codeBlock: (node, key, children) => (
+    <pre key={key} data-lang={str(node.attrs?.language)}>
+      <code>{children}</code>
+    </pre>
+  ),
+  horizontalRule: (_node, key) => <hr key={key} />,
+  hardBreak: (_node, key) => <br key={key} />,
+  image: (node, key) => {
+    const src = safeUrl(node.attrs?.src);
+    if (!src) return null;
+    return <img key={key} src={src} alt={str(node.attrs?.alt) ?? ''} loading="lazy" />;
+  },
+  text: (node, key) => applyMarks(node.text ?? '', node.marks, key),
+};
+
 function renderNode(node: Node, key: string, depth = 0): React.ReactNode {
   if (depth > MAX_RENDER_DEPTH) return null;
   const children = (node.content ?? []).map((c, i) => renderNode(c, `${key}.${i}`, depth + 1));
-  switch (node.type) {
-    case 'doc':
-      return <>{children}</>;
-    case 'paragraph':
-      return <p key={key}>{children}</p>;
-    case 'heading': {
-      const lvl = Math.min(Math.max(Number(node.attrs?.level ?? 2), 1), 6);
-      return React.createElement(`h${lvl}`, { key }, children);
-    }
-    case 'bulletList':
-      return <ul key={key}>{children}</ul>;
-    case 'orderedList':
-      return <ol key={key}>{children}</ol>;
-    case 'listItem':
-      return <li key={key}>{children}</li>;
-    case 'blockquote':
-      return <blockquote key={key}>{children}</blockquote>;
-    case 'codeBlock':
-      return (
-        <pre
-          key={key}
-          data-lang={typeof node.attrs?.language === 'string' ? node.attrs.language : undefined}
-        >
-          <code>{children}</code>
-        </pre>
-      );
-    case 'horizontalRule':
-      return <hr key={key} />;
-    case 'hardBreak':
-      return <br key={key} />;
-    case 'image': {
-      const src = safeUrl(node.attrs?.src);
-      if (!src) return null;
-      return (
-        <img
-          key={key}
-          src={src}
-          alt={typeof node.attrs?.alt === 'string' ? node.attrs.alt : ''}
-          loading="lazy"
-        />
-      );
-    }
-    case 'text':
-      return applyMarks(node.text ?? '', node.marks, key);
-    default:
-      return <>{children}</>;
-  }
+  const render = RENDERERS[node.type];
+  return render ? (
+    render(node, key, children)
+  ) : (
+    <React.Fragment key={key}>{children}</React.Fragment>
+  );
 }
 
 export default function TiptapRender({ doc }: { doc: unknown }) {
