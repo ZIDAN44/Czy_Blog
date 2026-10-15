@@ -54,7 +54,7 @@ Read in [config.ts](../apps/api/src/config.ts).
 | `S3_FORCE_PATH_STYLE`          | No        | on when `S3_ENDPOINT` set           | Path-style addressing.                                        |
 | `MEDIA_PUBLIC_BASE_URL`        | No        | `http://localhost:<API_PORT>/media` | Browser-facing base for image URLs.                           |
 | `MAX_UPLOAD_BYTES`             | No        | `10485760`                          | Per-file upload limit (10 MB).                                |
-| `MEDIA_CLEANUP_INTERVAL_HOURS` | No        | `24`                                | Orphan-media sweep interval.                                  |
+| `MEDIA_CLEANUP_INTERVAL_HOURS` | No        | `24`                                | Orphan-media sweep interval, in hours (above 0, max 596).     |
 | `NODE_ENV`                     | No        | —                                   | `production` enforces the `JWT_SECRET`/`CORS_ORIGINS` checks. |
 
 Generate a secret: `openssl rand -base64 48`.

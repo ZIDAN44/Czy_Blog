@@ -6,6 +6,19 @@ function required(name: string): string {
   return v;
 }
 
+// setInterval silently turns anything outside 1..2^31-1 ms (~596 h), or NaN, into 1 ms,
+// so a typo would sweep media in a tight loop. Empty falls back to the default.
+const MAX_TIMER_HOURS = Math.floor((2 ** 31 - 1) / 3_600_000);
+function intervalHours(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || n > MAX_TIMER_HOURS) {
+    throw new Error(`${name} must be a number of hours above 0 and at most ${MAX_TIMER_HOURS}`);
+  }
+  return n;
+}
+
 const DEV_JWT_SECRET = 'dev-jwt-secret-change-me';
 const isProd = process.env.NODE_ENV === 'production';
 const jwtSecret = process.env.JWT_SECRET ?? (isProd ? '' : DEV_JWT_SECRET);
@@ -83,5 +96,5 @@ export const config = {
     publicBaseUrl: mediaPublicBaseUrl,
   },
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES ?? 10 * 1024 * 1024),
-  mediaCleanupIntervalHours: Number(process.env.MEDIA_CLEANUP_INTERVAL_HOURS ?? 24),
+  mediaCleanupIntervalHours: intervalHours('MEDIA_CLEANUP_INTERVAL_HOURS', 24),
 };
