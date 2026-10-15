@@ -35,6 +35,22 @@ export default [
     },
   },
 
+  // Size and shape limits for app source — see docs/conventions.md. Counted lines
+  // skip blanks and comments, so explaining code never pushes a file over.
+  // Hitting a limit means "split by responsibility", not "raise the limit".
+  {
+    files: ['apps/*/src/**/*.{ts,tsx}', 'packages/*/src/**/*.{ts,tsx}'],
+    ignores: ['apps/api/src/generated/**'],
+    rules: {
+      'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['error', { max: 100, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['error', 4],
+      'max-params': ['error', 4],
+      'max-nested-callbacks': ['error', 3],
+      complexity: ['error', 20],
+    },
+  },
+
   {
     files: ['**/*.{js,mjs,cjs}'],
     languageOptions: {
