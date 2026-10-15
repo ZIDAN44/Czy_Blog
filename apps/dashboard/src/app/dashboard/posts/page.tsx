@@ -7,7 +7,7 @@ import { postUrl } from '@/lib/site';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 import PageHeader from '@/components/PageHeader';
-import SegmentedControl, { type Segment } from '@/components/SegmentedControl';
+import SegmentedControl, { type Segment } from '@czyblog/ui/SegmentedControl';
 import {
   STATUS_LABEL,
   STATUS_NAME,

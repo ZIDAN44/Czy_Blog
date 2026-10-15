@@ -2,10 +2,10 @@
   "$schema": "https://unpkg.com/syncpack@15.3.3/dist/schema.json",
   "versionGroups": [
     {
-      "label": "Use workspace protocol for local packages",
+      "label": "Local packages resolve by name (npm workspaces have no workspace: protocol)",
       "dependencies": ["@czyblog/**"],
       "dependencyTypes": ["!local"],
-      "pinVersion": "workspace:*"
+      "pinVersion": "*"
     }
   ],
   "semverGroups": [

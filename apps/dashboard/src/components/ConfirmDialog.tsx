@@ -1,7 +1,7 @@
 'use client';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Modal, Sheet } from '@/components/Overlay';
-import { useIsCompact } from '@/lib/useMotion';
+import { useIsCompact } from '@czyblog/ui/hooks';
 import { CircleCheck, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
 
 export type ConfirmTone = 'default' | 'danger' | 'warning' | 'success';

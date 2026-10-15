@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { SPRING_SNAPPY, SpringValue, prefersReducedMotion } from '@/lib/motion';
+import { SPRING_SNAPPY, SpringValue, prefersReducedMotion } from './motion';
 
 /** A spring that lives for the lifetime of the component. */
 export function useSpring(initial: number): SpringValue {

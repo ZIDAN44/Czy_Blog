@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Monitor, Moon, Sun } from 'lucide-react';
-import SegmentedControl, { type Segment } from '@/components/SegmentedControl';
-import { applyTheme, readTheme, storeTheme, type ThemePreference } from '@/lib/theme';
+import SegmentedControl, { type Segment } from './SegmentedControl';
+import { applyTheme, readTheme, storeTheme, type ThemePreference } from '../theme';
 
 const ICON = 'w-3.5 h-3.5';
 

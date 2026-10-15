@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { changePassword, currentUser, setSession, type SessionUser } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
-import ThemeToggle from '@/components/ThemeToggle';
+import ThemeToggle from '@czyblog/ui/ThemeToggle';
 import { useToast } from '@/components/Toast';
 import { errMsg, initials } from '@/lib/utils';
 

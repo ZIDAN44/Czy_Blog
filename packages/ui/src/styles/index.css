@@ -1,0 +1,19 @@
+/* Shared stylesheet for web and dashboard. Import after 'tailwindcss'.
+   Every colour is semantic; dark.css redefines the same names. */
+
+/* Let Tailwind see the class names used by the shared components. */
+@source '../';
+
+@import './tokens.css';
+@import './dark.css';
+@import './base.css';
+@import './typography.css';
+@import './surfaces.css';
+@import './buttons.css';
+@import './forms.css';
+@import './badges.css';
+@import './utilities.css';
+@import './prose.css';
+@import './code.css';
+@import './motion.css';
+@import './a11y.css';

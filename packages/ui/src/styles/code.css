@@ -1,0 +1,31 @@
+/* Syntax colours (lowlight/highlight.js) on the dark code ground. */
+
+.hljs-comment,
+.hljs-quote {
+  color: #8a847e;
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in {
+  color: #f0a868;
+}
+.hljs-string,
+.hljs-attr,
+.hljs-template-tag {
+  color: #a8d08d;
+}
+.hljs-number,
+.hljs-literal,
+.hljs-type {
+  color: #e5c07b;
+}
+.hljs-title,
+.hljs-function,
+.hljs-section {
+  color: #8fbcf0;
+}
+.hljs-variable,
+.hljs-params {
+  color: #e7e5e4;
+}

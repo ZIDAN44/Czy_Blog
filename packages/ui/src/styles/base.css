@@ -1,0 +1,92 @@
+/* Document defaults, focus, selection, press feedback, scrollbars. */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--color-canvas);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100%;
+  background: var(--color-canvas);
+  color: var(--color-content);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  touch-action: manipulation;
+}
+
+/* Theme swaps cross-fade instead of hard-cutting. */
+:root[data-theme-swap] *,
+:root[data-theme-swap] *::before,
+:root[data-theme-swap] *::after {
+  transition:
+    background-color 240ms var(--ease-out-soft),
+    border-color 240ms var(--ease-out-soft),
+    color 240ms var(--ease-out-soft),
+    fill 240ms var(--ease-out-soft),
+    box-shadow 240ms var(--ease-out-soft) !important;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 6px;
+}
+
+a,
+button,
+summary,
+[role='button'] {
+  transition:
+    color 120ms var(--ease-out-soft),
+    background-color 120ms var(--ease-out-soft),
+    border-color 120ms var(--ease-out-soft),
+    box-shadow 120ms var(--ease-out-soft),
+    opacity 120ms var(--ease-out-soft),
+    transform 120ms var(--ease-out-soft);
+}
+
+button:not(:disabled),
+[role='button'],
+summary,
+select,
+label[for] {
+  cursor: pointer;
+}
+
+.pressable:active,
+button:active:not(:disabled) {
+  transform: scale(0.98);
+  transition-duration: 60ms;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+  background-clip: padding-box;
+}

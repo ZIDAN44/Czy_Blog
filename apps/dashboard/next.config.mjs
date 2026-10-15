@@ -12,6 +12,8 @@ loadDotenv({ path: path.resolve(import.meta.dirname, '..', '..', '.env'), quiet:
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // The shared design system ships TypeScript source; Next compiles it with the app.
+  transpilePackages: ['@czyblog/ui'],
   outputFileTracingRoot: path.resolve(import.meta.dirname, '..', '..'),
 };
 

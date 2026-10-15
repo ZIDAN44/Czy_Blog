@@ -1,0 +1,25 @@
+{
+  "name": "@czyblog/ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Design system shared by the reader and the dashboard: styles, theme, motion, primitives.",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    "./styles.css": "./src/styles/index.css",
+    "./theme": "./src/theme.ts",
+    "./fonts": "./src/fonts.ts",
+    "./motion": "./src/motion.ts",
+    "./hooks": "./src/useMotion.ts",
+    "./Logo": "./src/components/Logo.tsx",
+    "./SegmentedControl": "./src/components/SegmentedControl.tsx",
+    "./ThemeToggle": "./src/components/ThemeToggle.tsx"
+  },
+  "peerDependencies": {
+    "lucide-react": "^1.57.0",
+    "next": "^16.2.6",
+    "react": "^19.2.6"
+  }
+}

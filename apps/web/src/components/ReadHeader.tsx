@@ -1,9 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Logo from '@/components/Logo';
-import ThemeToggle from '@/components/ThemeToggle';
-import { useScrolled } from '@/lib/useMotion';
+import Logo from '@czyblog/ui/Logo';
+import ThemeToggle from '@czyblog/ui/ThemeToggle';
+import { useScrolled } from '@czyblog/ui/hooks';
 
 // Floating chrome: the page scrolls under it; the edge appears once scrolled.
 export default function ReadHeader() {

@@ -1,0 +1,46 @@
+/* User preferences (motion, transparency, contrast). Imported last. */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .animate-fadeIn,
+  .animate-slideUp,
+  .stagger > * {
+    animation: fadeIn 160ms ease both !important;
+    transform: none !important;
+  }
+  .hover-lift:hover,
+  .group:hover .zoom-img,
+  button:active:not(:disabled),
+  .pressable:active {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .chrome,
+  .scrim {
+    backdrop-filter: none;
+    background: var(--color-canvas);
+  }
+  .scrim {
+    background: rgba(0, 0, 0, 0.6);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root:root {
+    --color-line: color-mix(in srgb, var(--color-content) 30%, transparent);
+    --color-line-strong: color-mix(in srgb, var(--color-content) 48%, transparent);
+    --color-content-secondary: color-mix(in srgb, var(--color-content) 85%, transparent);
+    --color-content-tertiary: color-mix(in srgb, var(--color-content) 70%, transparent);
+  }
+}

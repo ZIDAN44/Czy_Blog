@@ -8,8 +8,8 @@ import {
   prefersReducedMotion,
   project,
   rubberband,
-} from '@/lib/motion';
-import { useFocusTrap, useScrollLock, useSpring, useSpringEffect } from '@/lib/useMotion';
+} from '@czyblog/ui/motion';
+import { useFocusTrap, useScrollLock, useSpring, useSpringEffect } from '@czyblog/ui/hooks';
 
 function usePortal(): HTMLElement | null {
   const [host, setHost] = useState<HTMLElement | null>(null);

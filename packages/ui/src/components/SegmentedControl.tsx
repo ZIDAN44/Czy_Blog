@@ -1,5 +1,5 @@
 'use client';
-import { useMovingIndicator } from '@/lib/useMotion';
+import { useMovingIndicator } from '../useMotion';
 
 export interface Segment<T extends string> {
   value: T;

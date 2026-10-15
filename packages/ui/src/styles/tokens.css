@@ -1,0 +1,86 @@
+/* Design tokens: colour, radius, font stacks (light is the base). */
+
+@theme {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-soft: cubic-bezier(0.64, 0, 0.78, 0);
+  --ease-out-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Grounds */
+  --color-canvas: #fbfaf7;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f4f2ed;
+  --color-fill-hover: rgba(28, 25, 23, 0.045);
+  --color-fill-active: rgba(28, 25, 23, 0.085);
+
+  /* Content */
+  --color-content: #1c1917;
+  --color-content-secondary: #57534e;
+  --color-content-tertiary: #78716c;
+
+  /* Lines */
+  --color-line: rgba(28, 25, 23, 0.085);
+  --color-line-strong: rgba(28, 25, 23, 0.15);
+
+  --color-inverse: #1c1917;
+  --color-on-inverse: #fafaf9;
+
+  /* Accent — the amber of the logo's Z, deepened for text contrast. */
+  --color-accent: #b45309;
+  --color-accent-strong: #92400e;
+  --color-accent-soft: #fdf3e3;
+  --color-accent-content: #8a3f0c;
+
+  /* Status: soft ground + the content colour that sits on it. */
+  --color-danger: #dc2626;
+  --color-danger-soft: #fef2f2;
+  --color-danger-content: #b91c1c;
+  --color-warning: #d97706;
+  --color-warning-soft: #fef6e1;
+  --color-warning-content: #8a5300;
+  --color-success: #16a34a;
+  --color-success-soft: #eefbf2;
+  --color-success-content: #166534;
+  --color-info: #2563eb;
+  --color-info-soft: #eff4ff;
+  --color-info-content: #1e40af;
+
+  /* Auth brand panel */
+  --color-brand-panel: #1c1917;
+  --color-on-brand: #fafaf9;
+  --color-brand-muted: #a8a29e;
+
+  --radius-chip: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-surface: 1rem;
+}
+
+@theme inline {
+  --font-sans:
+    var(--font-geist), ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+    sans-serif;
+  --font-serif: var(--font-newsreader), 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+}
+
+:root {
+  --material-chrome: rgba(251, 250, 247, 0.82);
+  --material-thick: #ffffff;
+
+  --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.05);
+  --shadow-chip: 0 1px 2px rgba(28, 25, 23, 0.06);
+  --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-raised: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px -12px rgba(28, 25, 23, 0.14);
+  --shadow-modal: 0 2px 6px rgba(28, 25, 23, 0.06), 0 24px 56px -16px rgba(28, 25, 23, 0.28);
+  --shadow-edge: 0 1px 0 var(--color-line);
+
+  --scrim: rgba(28, 25, 23, 0.36);
+  --scrollbar: rgba(28, 25, 23, 0.18);
+  --scrollbar-hover: rgba(28, 25, 23, 0.3);
+  --selection: rgba(217, 119, 6, 0.2);
+  --focus-ring: 0 0 0 2px var(--color-canvas), 0 0 0 4px rgba(180, 83, 9, 0.55);
+
+  --code-bg: #1c1917;
+  --code-content: #e7e5e4;
+
+  color-scheme: light;
+}

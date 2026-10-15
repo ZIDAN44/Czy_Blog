@@ -13,6 +13,7 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/dashboard/package.json apps/dashboard/package.json
 COPY apps/web/package.json apps/web/package.json
+COPY packages/ui/package.json packages/ui/package.json
 RUN npm ci
 
 # Prisma client + TypeScript -> dist/

@@ -14,8 +14,8 @@ import {
   VelocityTracker,
   prefersReducedMotion,
   project,
-} from '@/lib/motion';
-import { useSpring } from '@/lib/useMotion';
+} from '@czyblog/ui/motion';
+import { useSpring } from '@czyblog/ui/hooks';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 
 // Non-blocking feedback that only needs to be seen (status/success/warning/error);

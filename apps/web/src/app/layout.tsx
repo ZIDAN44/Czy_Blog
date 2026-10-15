@@ -4,9 +4,9 @@ import Script from 'next/script';
 import Link from 'next/link';
 import { Rss } from 'lucide-react';
 import ReadHeader from '@/components/ReadHeader';
-import Logo from '@/components/Logo';
-import { fontVariables } from '@/lib/fonts';
-import { THEME_BOOTSTRAP } from '@/lib/theme';
+import Logo from '@czyblog/ui/Logo';
+import { fontVariables } from '@czyblog/ui/fonts';
+import { THEME_BOOTSTRAP } from '@czyblog/ui/theme';
 
 export const metadata: Metadata = {
   title: { default: 'Czy Blog', template: '%s · Czy Blog' },

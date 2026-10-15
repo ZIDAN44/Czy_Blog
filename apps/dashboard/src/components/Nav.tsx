@@ -15,12 +15,12 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import Logo from '@/components/Logo';
+import Logo from '@czyblog/ui/Logo';
 import { Popover, Sheet } from '@/components/Overlay';
-import ThemeToggle from '@/components/ThemeToggle';
+import ThemeToggle from '@czyblog/ui/ThemeToggle';
 import { clearSession, currentUser, logout, type SessionUser } from '@/lib/api';
 import { siteUrl } from '@/lib/site';
-import { useMediaQuery, useScrolled } from '@/lib/useMotion';
+import { useMediaQuery, useScrolled } from '@czyblog/ui/hooks';
 import { initials } from '@/lib/utils';
 
 interface NavLink {

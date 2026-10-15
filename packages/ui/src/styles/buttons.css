@@ -1,0 +1,120 @@
+/* Buttons: variants, sizes and tones. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.006em;
+  line-height: 1;
+  border-radius: var(--radius-chip);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-sm {
+  height: 1.875rem;
+  padding: 0 0.625rem;
+  font-size: 0.8125rem;
+  gap: 0.3rem;
+}
+.btn-sm svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+.btn-lg {
+  height: 2.75rem;
+  padding: 0 1.25rem;
+  font-size: 0.9375rem;
+}
+.btn-icon {
+  width: 2.25rem;
+  padding: 0;
+}
+.btn-icon.btn-sm {
+  width: 1.875rem;
+}
+
+.btn-primary {
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
+  box-shadow: var(--shadow-xs);
+}
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-inverse) 86%, var(--color-canvas));
+}
+
+.btn-accent {
+  background: var(--color-accent);
+  color: #fff;
+  box-shadow: var(--shadow-xs);
+}
+.btn-accent:hover:not(:disabled) {
+  background: var(--color-accent-strong);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-line-strong);
+  color: var(--color-content);
+  box-shadow: var(--shadow-xs);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-content));
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-content-secondary);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-fill-hover);
+  color: var(--color-content);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-danger-content);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
+
+.btn-warn {
+  background: var(--color-warning);
+  color: #1c1917;
+  box-shadow: var(--shadow-xs);
+}
+.btn-warn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.btn-tone-danger {
+  background: #dc2626;
+  color: #fff;
+  box-shadow: var(--shadow-xs);
+}
+.btn-tone-success {
+  background: #15803d;
+  color: #fff;
+  box-shadow: var(--shadow-xs);
+}
+.btn-tone-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+.btn-tone-success:hover:not(:disabled) {
+  background: #166534;
+}

@@ -13,11 +13,13 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/dashboard/package.json apps/dashboard/package.json
 COPY apps/web/package.json apps/web/package.json
+COPY packages/ui/package.json packages/ui/package.json
 RUN npm ci
 
 # build: compile the Next.js app
 FROM deps AS build
 ENV NEXT_TELEMETRY_DISABLED=1
+COPY packages/ui ./packages/ui
 COPY apps/web ./apps/web
 RUN npm run build:web
 

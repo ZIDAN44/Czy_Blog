@@ -1,4 +1,4 @@
-import Logo from '@/components/Logo';
+import Logo from '@czyblog/ui/Logo';
 
 // Split layout for unauthenticated pages: brand panel (when there's room) + form column.
 export default function AuthShell({
