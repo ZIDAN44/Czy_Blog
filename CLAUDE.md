@@ -119,6 +119,9 @@ One `.env` at the repo root, loaded by every app (`apps/api/src/env.ts`, both
   ≥ 32-char `JWT_SECRET` and refuse `*` in `CORS_ORIGINS`. Use `development` locally.
 - The API refuses to start without `DATABASE_URL` and `S3_BUCKET`, or with
   `MEDIA_CLEANUP_INTERVAL_HOURS` outside (0, 596].
+- `PUBLIC_SITE_URL` is read by both the API and the reader. Every absolute URL the reader
+  emits (sitemap, robots.txt, canonicals, Open Graph) comes from it, so a localhost value
+  in production silently points search engines at localhost.
 - `.env` may hold real production credentials — never print, commit, or copy its values.
 
 ## Style
