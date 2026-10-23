@@ -59,6 +59,34 @@ export const fetchPost = cache(async (slug: string): Promise<PostDetail | null> 
   }
 });
 
+// The public list endpoint caps `limit` at 50.
+const SITEMAP_PAGE_SIZE = 50;
+// A hard stop so a misbehaving API can't keep the sitemap paging forever.
+const SITEMAP_MAX_PAGES = 200;
+
+/**
+ * Every published post's slug and dates, for the sitemap. Pages through the
+ * public API (50 per request, so one call for a typical blog). Returns what it
+ * has so far if a page fails.
+ */
+export async function fetchAllPublished(): Promise<PostSummary[]> {
+  const all: PostSummary[] = [];
+  for (let page = 1; page <= SITEMAP_MAX_PAGES; page++) {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/posts?limit=${SITEMAP_PAGE_SIZE}&page=${page}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) break;
+      const { data, pagination } = await res.json();
+      all.push(...data);
+      if (!pagination || page >= pagination.pages) break;
+    } catch {
+      break;
+    }
+  }
+  return all;
+}
+
 /** A few other recent posts, for "Keep reading". */
 export async function fetchMore(excludeId: string, count = 3): Promise<PostSummary[]> {
   const result = await fetchPosts(count + 1);

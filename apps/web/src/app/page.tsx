@@ -1,7 +1,14 @@
+import type { Metadata } from 'next';
 import FeaturedPost from '@/components/home/FeaturedPost';
+import { OPEN_GRAPH_BASE, SITE_DESCRIPTION } from '@/lib/site';
 import Hero, { IndexNotice } from '@/components/home/Hero';
 import PostListItem from '@/components/home/PostListItem';
 import { fetchPosts } from '@/lib/posts';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+  openGraph: { ...OPEN_GRAPH_BASE, type: 'website', url: '/', description: SITE_DESCRIPTION },
+};
 
 export default async function ReadIndex() {
   const result = await fetchPosts();

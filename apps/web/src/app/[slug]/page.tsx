@@ -5,17 +5,34 @@ import TiptapRender from '@/components/TiptapRender';
 import KeepReading from '@/components/post/KeepReading';
 import PostFooter from '@/components/post/PostFooter';
 import PostHeader from '@/components/post/PostHeader';
+import PostJsonLd from '@/components/post/PostJsonLd';
 import { fetchMore, fetchPost } from '@/lib/posts';
+import { OPEN_GRAPH_BASE } from '@/lib/site';
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const post = await fetchPost((await params).slug);
   if (!post) return { title: 'Not found' };
+  const description = post.excerpt ?? undefined;
+  const images = post.cover_image ? [post.cover_image] : undefined;
   return {
     title: post.title,
-    description: post.excerpt ?? undefined,
-    openGraph: { title: post.title, images: post.cover_image ? [post.cover_image] : undefined },
+    description,
+    // The API's canonical_link is built from the same PUBLIC_SITE_URL as RSS.
+    alternates: { canonical: post.canonical_link },
+    openGraph: {
+      ...OPEN_GRAPH_BASE,
+      type: 'article',
+      url: post.canonical_link,
+      title: post.title,
+      description,
+      images,
+      publishedTime: post.published_date ?? undefined,
+      authors: [post.author.name],
+      tags: post.tags.map((t) => t.name),
+    },
+    twitter: { title: post.title, description, images },
   };
 }
 
@@ -26,6 +43,7 @@ export default async function ReadPost({ params }: Params) {
 
   return (
     <>
+      <PostJsonLd post={post} />
       <ReadingProgress />
       <article className="px-5 sm:px-8">
         <PostHeader post={post} />

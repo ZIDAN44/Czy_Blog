@@ -45,7 +45,7 @@ Read in [config.ts](../apps/api/src/config.ts).
 | `API_HOST`                     | No        | `0.0.0.0`                           | Bind address. Falls back to `HOST`.                           |
 | `CORS_ORIGINS`                 | No        | `http://localhost:3000`             | Comma-separated origins. `*` is refused in production.        |
 | `TRUST_PROXY`                  | No        | `false`                             | Client-IP source. `false` \| `true` \| hop count \| cidr.     |
-| `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`             | Reader origin: post links in RSS / content API.               |
+| `PUBLIC_SITE_URL`              | No        | `http://localhost:3000`             | Reader origin: post links in RSS / content API, and the reader's canonical, Open Graph and sitemap URLs. Also read by the web app. |
 | `S3_BUCKET`                    | Yes       | —                                   | Bucket uploads are stored in.                                 |
 | `S3_REGION`                    | No        | `us-east-1`                         | Bucket region.                                                |
 | `S3_ACCESS_KEY_ID`             | No        | —                                   | Access key.                                                   |

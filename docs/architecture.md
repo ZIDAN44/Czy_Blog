@@ -56,6 +56,11 @@ fetches the API directly via `API_URL`; the browser loads images from the API's 
 route (streamed from the private bucket) and reaches the feed via the reader's same-origin
 `/rss.xml` passthrough.
 
+For search engines the reader serves `/sitemap.xml` (home plus every published post,
+built per request) and `/robots.txt`, and each page sets a canonical URL, Open Graph
+tags and, on posts, `BlogPosting` structured data. All absolute URLs come from
+`PUBLIC_SITE_URL`, the same origin RSS and `canonical_link` use.
+
 ## Auth cookie + proxy (console)
 
 The session JWT lives in an **httpOnly cookie** JavaScript cannot read, so XSS can't

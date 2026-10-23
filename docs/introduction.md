@@ -60,6 +60,8 @@ flowchart LR
 - Search/filter published posts by text, tag, or category.
 - Per-post view counts.
 - RSS feed at `/rss.xml` (25 latest).
+- Search-engine basics: `/sitemap.xml`, `/robots.txt`, canonical URLs, Open Graph and
+  `BlogPosting` structured data.
 - Content API: other sites read published posts as JSON with an `x-api-key`.
 
 ### Operational

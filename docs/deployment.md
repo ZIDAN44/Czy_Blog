@@ -88,9 +88,11 @@ Add further users from the console (Users).
 - Console: `http://<host>:3001`
 - API (optional): `http://<host>:4000`
 - RSS: `http://<host>:3000/rss.xml`
+- Sitemap and robots: `http://<host>:3000/sitemap.xml`, `/robots.txt`
 
 For a real domain, put a reverse proxy with TLS in front of both apps. Set
-`PUBLIC_SITE_URL` to the reader's URL. Expose 4000 only for headless
+`PUBLIC_SITE_URL` to the reader's URL: the sitemap, `robots.txt` and every canonical
+link are built from it, so a localhost value would point search engines at localhost. Expose 4000 only for headless
 [content API](api.md#content-api-headless--apiv1content) clients. Behind the proxy, set
 [`TRUST_PROXY`](environment.md#trust_proxy) to the proxy's address/CIDR; leave it
 `false` while the API is only reachable inside the Compose network.

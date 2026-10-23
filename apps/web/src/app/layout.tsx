@@ -7,11 +7,18 @@ import ReadHeader from '@/components/ReadHeader';
 import Logo from '@czyblog/ui/Logo';
 import { fontVariables } from '@czyblog/ui/fonts';
 import { THEME_BOOTSTRAP } from '@czyblog/ui/theme';
+import { OPEN_GRAPH_BASE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 
+// metadataBase turns relative URLs in any page's metadata (Open Graph images,
+// canonicals) into absolute ones, which crawlers and link previews require.
+// Each page sets its own canonical; one here would be inherited by every post.
 export const metadata: Metadata = {
-  title: { default: 'Czy Blog', template: '%s · Czy Blog' },
-  description: 'A personal blog of essays and notes on things worth thinking about.',
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
   alternates: { types: { 'application/rss+xml': '/rss.xml' } },
+  openGraph: { ...OPEN_GRAPH_BASE, type: 'website', description: SITE_DESCRIPTION },
+  twitter: { card: 'summary_large_image' },
 };
 
 export const viewport: Viewport = {
