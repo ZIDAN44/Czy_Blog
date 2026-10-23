@@ -51,9 +51,13 @@ async function getPublished(req: FastifyRequest, reply: FastifyReply) {
   });
   if (!post) return reply.code(404).send({ error: 'Not found' });
   // Fire-and-forget: a failed view bump must not fail the read.
-  prisma.post
-    .update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } })
-    .catch((err) => req.log.warn({ err }, 'failed to increment view count'));
+  // Raw SQL on purpose: prisma.post.update() would also stamp @updatedAt, turning
+  // every read (crawlers included) into an "edit" — the dashboard's "Edited" time
+  // and the reader's sitemap lastmod both read updated_at. Tagged template, so
+  // the id is a bound parameter.
+  prisma.$executeRaw`UPDATE "Post" SET "viewCount" = "viewCount" + 1 WHERE "id" = ${post.id}`.catch(
+    (err) => req.log.warn({ err }, 'failed to increment view count'),
+  );
   return reply.send({ data: serializePost(post) });
 }
 

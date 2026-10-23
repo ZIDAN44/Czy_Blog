@@ -47,7 +47,7 @@ Only published, non-deleted posts.
 | Method | Path           | Auth   | Purpose                                                                  |
 | ------ | -------------- | ------ | ------------------------------------------------------------------------ |
 | GET    | `/posts`       | Public | List. Query: `page`, `limit` (≤50), `tag`, `category`, `q` (≤100 chars). |
-| GET    | `/posts/:slug` | Public | One post by slug; increments view count.                                 |
+| GET    | `/posts/:slug` | Public | One post by slug; increments view count (without changing `updated_at`). |
 
 ## Posts — admin — `/api/v1/admin/posts`
 
