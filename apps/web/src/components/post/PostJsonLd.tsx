@@ -16,6 +16,7 @@ export default function PostJsonLd({ post }: { post: PostDetail }) {
     ...(post.excerpt && { description: post.excerpt }),
     ...(post.cover_image && { image: [post.cover_image] }),
     ...(post.published_date && { datePublished: post.published_date }),
+    dateModified: post.updated_at,
     author: { '@type': 'Person', name: post.author.name },
     publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
     mainEntityOfPage: post.canonical_link,

@@ -57,7 +57,7 @@ route (streamed from the private bucket) and reaches the feed via the reader's s
 `/rss.xml` passthrough.
 
 For search engines the reader serves `/sitemap.xml` (home plus every published post,
-built per request) and `/robots.txt`, and each page sets a canonical URL, Open Graph
+built per request, `lastmod` from each post's `updated_at`) and `/robots.txt`, and each page sets a canonical URL, Open Graph
 tags and, on posts, `BlogPosting` structured data. All absolute URLs come from
 `PUBLIC_SITE_URL`, the same origin RSS and `canonical_link` use.
 

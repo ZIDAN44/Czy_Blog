@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { fetchAllPublished } from '@/lib/posts';
+import { fetchAllPublished, type PostSummary } from '@/lib/posts';
 import { SITE_URL } from '@/lib/site';
 
 // Built per request. A build-time sitemap would be generated where the API isn't
@@ -9,19 +9,26 @@ export const dynamic = 'force-dynamic';
 /**
  * /sitemap.xml: the home page and every published post.
  *
- * `lastModified` is the publish date. The post's `updated_at` is not used on
- * purpose: the view counter writes to the same row, so it changes on every read,
- * including each crawler visit, and a lastmod that always moves gets ignored.
+ * `lastModified` is the post's last edit (`updated_at`), falling back to the
+ * publish date. The home page takes the newest of those, since it lists posts.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await fetchAllPublished();
-  const newest = posts[0]?.published_date;
+  const modified = (p: PostSummary) => p.updated_at ?? p.published_date;
+  const newest = posts
+    .map(modified)
+    .filter((d): d is string => Boolean(d))
+    .sort()
+    .at(-1);
 
   return [
     { url: `${SITE_URL}/`, ...(newest && { lastModified: new Date(newest) }) },
-    ...posts.map((post) => ({
-      url: `${SITE_URL}/${post.slug}`,
-      ...(post.published_date && { lastModified: new Date(post.published_date) }),
-    })),
+    ...posts.map((post) => {
+      const date = modified(post);
+      return {
+        url: `${SITE_URL}/${post.slug}`,
+        ...(date && { lastModified: new Date(date) }),
+      };
+    }),
   ];
 }

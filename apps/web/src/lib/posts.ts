@@ -18,6 +18,8 @@ export interface PostSummary {
   content: unknown;
   cover_image: string | null;
   published_date: string | null;
+  /** Last real edit. View counts don't touch it. */
+  updated_at: string;
   author: Author;
   category: { slug: string; name: string } | null;
   tags: { slug: string; name: string }[];
