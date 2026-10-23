@@ -49,7 +49,9 @@ function applyMarks(text: string, marks: Node['marks'], key: string): React.Reac
           // target from the document is constrained to same-tab or new-tab only.
           target={m.attrs?.target === '_self' ? '_self' : '_blank'}
           // noopener blocks window.opener; noreferrer keeps the reader's URL out of logs.
-          rel="noopener noreferrer nofollow"
+          // No nofollow: posts are written by staff (contributors' go through review), so
+          // their links are editorial and should count for the pages they point to.
+          rel="noopener noreferrer"
         >
           {node}
         </a>

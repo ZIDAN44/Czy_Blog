@@ -84,7 +84,9 @@ downgrades to `PENDING_REVIEW`; only editors+ create new categories/tags via slu
 `hardBreak`, `image`, `text`; marks `bold`, `italic`, `strike`, `code`, `link`); unknown
 types are rejected. Limits: 30 levels deep, 10000 nodes, 50000 chars per text node.
 `href`/`src` must be relative or `http`/`https`/`mailto` — `javascript:` and `data:` are
-rejected.
+rejected. The reader renders links with `rel="noopener noreferrer"` and no `nofollow`:
+post content is editorial (written by staff, contributors' posts reviewed), so its links count
+for the pages they point to.
 
 ## Taxonomy — `/api/v1`
 
