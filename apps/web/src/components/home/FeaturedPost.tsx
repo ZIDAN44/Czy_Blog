@@ -11,8 +11,13 @@ export default function FeaturedPost({ post }: { post: PostSummary }) {
       className="group grid gap-6 lg:gap-10 py-12 sm:py-14 lg:grid-cols-[1.2fr_1fr] items-center border-b border-line animate-slideUp"
     >
       {post.cover_image ? (
-        <div className="aspect-[3/2] overflow-hidden rounded-xl bg-surface-sunken ring-1 ring-line">
-          <img src={post.cover_image} alt="" className="zoom-img w-full h-full object-cover" />
+        // Whole cover at its own ratio (no crop); tall ones are capped and letterboxed.
+        <div className="overflow-hidden rounded-xl bg-surface-sunken ring-1 ring-line">
+          <img
+            src={post.cover_image}
+            alt=""
+            className="zoom-img block w-full h-auto max-h-[28rem] object-contain"
+          />
         </div>
       ) : (
         <div className="aspect-[3/2] rounded-xl bg-surface-sunken ring-1 ring-line bg-dots" />

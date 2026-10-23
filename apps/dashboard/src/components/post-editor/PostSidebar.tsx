@@ -48,7 +48,8 @@ function CoverPanel({ state: { form, set } }: { state: PostFormState }) {
         <img
           src={form.coverImageUrl}
           alt=""
-          className="rounded-lg w-full aspect-[16/9] object-cover ring-1 ring-line mb-3"
+          // Same uncropped rendering as the published post, so the preview is honest.
+          className="block rounded-lg w-full h-auto max-h-80 object-contain bg-surface-sunken ring-1 ring-line mb-3"
         />
       ) : (
         <div className="rounded-lg w-full aspect-[16/9] bg-surface-sunken ring-1 ring-line bg-dots mb-3 grid place-items-center t-caption">

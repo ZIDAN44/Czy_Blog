@@ -49,10 +49,13 @@ export default async function ReadPost({ params }: Params) {
         <PostHeader post={post} />
         {post.cover_image && (
           <figure className="max-w-5xl mx-auto mt-10">
+            {/* Natural aspect ratio: covers are often screenshots or text graphics,
+                and a fixed crop cuts their edges. Very tall images are capped and
+                letterboxed instead of cropped. */}
             <img
               src={post.cover_image}
               alt=""
-              className="w-full aspect-[16/9] object-cover rounded-xl ring-1 ring-line"
+              className="w-full h-auto max-h-[80vh] object-contain bg-surface-sunken rounded-xl ring-1 ring-line"
             />
           </figure>
         )}
